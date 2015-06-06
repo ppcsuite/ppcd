@@ -333,9 +333,13 @@ func (b *blockManager) askForBlock(peer *peer, blockSha *wire.ShaHash) {
 			"existing inventory during block fetch: %v", err)
 	}
 	if !haveInv {
-		b.requestedBlocks[*blockSha] = struct{}{}
-		peer.requestedBlocks[*blockSha] = struct{}{}
-		peer.askFor(iv)
+		// Request the block if there is not already a pending request.
+		if _, exists := b.requestedBlocks[*blockSha]; !exists {
+			bmgrLog.Debugf("Requesting block %v from %s", blockSha, peer.addr)
+			b.requestedBlocks[*blockSha] = struct{}{}
+			peer.requestedBlocks[*blockSha] = struct{}{}
+			peer.askFor(iv)
+		}
 	}
 }
 
