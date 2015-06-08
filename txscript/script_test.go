@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/ppcsuite/ppcd/txscript"
-	"github.com/ppcsuite/ppcd/wire"
 )
 
 // TestPushedData ensured the PushedData function extracts the expected data out

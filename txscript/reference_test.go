@@ -16,7 +16,8 @@ import (
 
 	. "github.com/ppcsuite/ppcd/txscript"
 	"github.com/ppcsuite/ppcd/wire"
-	"github.com/ppcsuite/ppcutil"
+//	"github.com/ppcsuite/ppccutil" // TODO: NewTxFromBytes function
+	"github.com/ppcsuite/btcutil"
 )
 
 // testName returns a descriptive test name for the given reference test data.

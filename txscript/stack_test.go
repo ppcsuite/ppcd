@@ -9,8 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"testing"
-
-	"github.com/ppcsuite/ppcd/txscript"
 )
 
 // TestStack tests that all of the stack operations work as expected.
