@@ -18,7 +18,7 @@ import (
 func TestCheckBlockScripts(t *testing.T) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	testBlockNum := 277647
+	testBlockNum := 178482
 	blockDataFile := fmt.Sprintf("%d.dat.bz2", testBlockNum)
 	blocks, err := loadBlocks(blockDataFile)
 	if err != nil {

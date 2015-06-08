@@ -10,9 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-
-	"github.com/ppcsuite/ppcd/txscript"
-	"github.com/ppcsuite/ppcd/wire"
 )
 
 // TestOpcodeDisabled tests the opcodeDisabled function manually because all

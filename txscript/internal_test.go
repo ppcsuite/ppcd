@@ -13,9 +13,6 @@ package txscript
 
 import (
 	"testing"
-
-	"github.com/ppcsuite/btcutil"
-	"github.com/ppcsuite/ppcd/wire"
 )
 
 // TstMaxScriptSize makes the internal maxScriptSize constant available to the
