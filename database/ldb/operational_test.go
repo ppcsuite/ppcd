@@ -510,7 +510,7 @@ func TestLimitAndSkipFetchTxsForAddr(t *testing.T) {
 
 	// Insert a block with some fake test transactions. The block will have
 	// 10 copies of a fake transaction involving same address.
-	addrString := "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+	addrString := "P9AqJKeEe9Y8e9j4zF88mzD7gm5UG928iP"
 	targetAddr, err := btcutil.DecodeAddress(addrString, &chaincfg.MainNetParams)
 	if err != nil {
 		t.Fatalf("Unable to decode test address: %v", err)
