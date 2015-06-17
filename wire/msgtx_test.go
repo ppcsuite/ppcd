@@ -757,4 +757,4 @@ var multiTxEncoded = []byte{
 
 // multiTxPkScriptLocs is the location information for the public key scripts
 // located in multiTx.
-var multiTxPkScriptLocs = []int{63, 139}
+var multiTxPkScriptLocs = []int{67, 143}

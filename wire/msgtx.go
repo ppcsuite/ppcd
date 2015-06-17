@@ -451,10 +451,10 @@ func (msg *MsgTx) PkScriptLocs() []int {
 	// The starting offset in the serialized transaction of the first
 	// transaction output is:
 	//
-	// Version 4 bytes + serialized varint size for the number of
-	// transaction inputs and outputs + serialized size of each transaction
-	// input.
-	n := 4 + VarIntSerializeSize(uint64(len(msg.TxIn))) +
+	// Version 4 bytes + timestamp 4 bytes + serialized varint size for the
+	// number of transaction inputs and outputs + serialized size of each
+	// transaction input.
+	n := 4 + 4 + VarIntSerializeSize(uint64(len(msg.TxIn))) +
 		VarIntSerializeSize(uint64(numTxOut))
 	for _, txIn := range msg.TxIn {
 		n += txIn.SerializeSize()
