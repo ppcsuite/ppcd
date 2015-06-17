@@ -14,10 +14,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ppcsuite/btcutil"
 	. "github.com/ppcsuite/ppcd/txscript"
 	"github.com/ppcsuite/ppcd/wire"
-//	"github.com/ppcsuite/ppccutil" // TODO: NewTxFromBytes function
-	"github.com/ppcsuite/btcutil"
 )
 
 // testName returns a descriptive test name for the given reference test data.
@@ -435,14 +434,14 @@ testloop:
 func TestTxValidTests(t *testing.T) {
 	file, err := ioutil.ReadFile("data/tx_valid.json")
 	if err != nil {
-		t.Errorf("TestBitcoindInvalidTests: %v\n", err)
+		t.Errorf("TestBitcoindValidTests: %v\n", err)
 		return
 	}
 
 	var tests [][]interface{}
 	err = json.Unmarshal(file, &tests)
 	if err != nil {
-		t.Errorf("TestBitcoindInvalidTests couldn't Unmarshal: %v\n",
+		t.Errorf("TestBitcoindValidTests couldn't Unmarshal: %v\n",
 			err)
 		return
 	}
