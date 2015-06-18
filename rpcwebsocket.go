@@ -293,20 +293,19 @@ out:
 			switch n := n.(type) {
 			case *notificationBlockConnected:
 				block := (*btcutil.Block)(n)
-				if len(blockNotifications) != 0 {
-					m.notifyBlockConnected(blockNotifications,
-						block)
-				}
 
 				// Skip iterating through all txs if no
 				// tx notification requests exist.
-				if len(watchedOutPoints) == 0 && len(watchedAddrs) == 0 {
-					continue
+				if len(watchedOutPoints) != 0 || len(watchedAddrs) != 0 {
+					for _, tx := range block.Transactions() {
+						m.notifyForTx(watchedOutPoints,
+							watchedAddrs, tx, block)
+					}
 				}
 
-				for _, tx := range block.Transactions() {
-					m.notifyForTx(watchedOutPoints,
-						watchedAddrs, tx, block)
+				if len(blockNotifications) != 0 {
+					m.notifyBlockConnected(blockNotifications,
+						block)
 				}
 
 			case *notificationBlockDisconnected:
@@ -412,7 +411,7 @@ func (*wsNotificationManager) notifyBlockConnected(clients map[chan struct{}]*ws
 
 	// Notify interested websocket clients about the connected block.
 	ntfn := btcjson.NewBlockConnectedNtfn(block.Sha().String(),
-		int32(block.Height()))
+		int32(block.Height()), block.MsgBlock().Header.Timestamp.Unix())
 	marshalledJSON, err := btcjson.MarshalCmd(nil, ntfn)
 	if err != nil {
 		rpcsLog.Error("Failed to marshal block connected notification: "+
@@ -436,7 +435,7 @@ func (*wsNotificationManager) notifyBlockDisconnected(clients map[chan struct{}]
 
 	// Notify interested websocket clients about the disconnected block.
 	ntfn := btcjson.NewBlockDisconnectedNtfn(block.Sha().String(),
-		int32(block.Height()))
+		int32(block.Height()), block.MsgBlock().Header.Timestamp.Unix())
 	marshalledJSON, err := btcjson.MarshalCmd(nil, ntfn)
 	if err != nil {
 		rpcsLog.Error("Failed to marshal block disconnected "+
