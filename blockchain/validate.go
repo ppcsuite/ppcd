@@ -654,15 +654,16 @@ func (b *BlockChain) checkBlockHeaderContext(header *wire.BlockHeader, prevNode 
 	}
 
 	if !fastAdd {
+		/* ppc:
 		// Reject version 2 blocks once a majority of the network has
 		// upgraded.  This is part of BIP0066.
-		/* ppc: if header.Version < 3 && b.isMajorityVersion(3, prevNode,
+		if header.Version < 3 && b.isMajorityVersion(3, prevNode,
 			b.chainParams.BlockRejectNumRequired) {
 
 			str := "new blocks with version %d are no longer valid"
 			str = fmt.Sprintf(str, header.Version)
 			return ruleError(ErrBlockVersionTooOld, str)
-		}*/
+		}
 
 		// Reject version 1 blocks once a majority of the network has
 		// upgraded.  This is part of BIP0034.
@@ -672,7 +673,7 @@ func (b *BlockChain) checkBlockHeaderContext(header *wire.BlockHeader, prevNode 
 			str := "new blocks with version %d are no longer valid"
 			str = fmt.Sprintf(str, header.Version)
 			return ruleError(ErrBlockVersionTooOld, str)
-		}
+		}*/
 	}
 
 	return nil
