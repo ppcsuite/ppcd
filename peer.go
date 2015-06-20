@@ -561,11 +561,27 @@ func (p *peer) pushBlockMsg(sha *wire.ShaHash, doneChan, waitChan chan struct{})
 	if p.continueHash != nil && p.continueHash.IsEqual(sha) {
 		hash, _, err := p.server.db.NewestSha()
 		if err == nil {
-			invMsg := wire.NewMsgInvSizeHint(1)
-			iv := wire.NewInvVect(wire.InvTypeBlock, hash)
-			invMsg.AddInvVect(iv)
-			p.QueueMessage(invMsg, doneChan)
-			p.continueHash = nil
+			// ppc: send latest proof-of-work block to allow the
+			// download node to accept as orphan (proof-of-stake
+			// block might be rejected by stake connection check)
+			// https://github.com/ppcoin/ppcoin/blob/v0.4.0ppc/src/main.cpp#L2910
+			newestBlk, err := p.server.db.FetchBlockBySha(hash)
+			if err == nil {
+				lastBlk := ppcutil.GetLastBlockIndex(
+					p.server.db, newestBlk, false)
+				if lastBlk != nil {
+					hash := lastBlk.Sha()
+					invMsg := wire.NewMsgInvSizeHint(1)
+					iv := wire.NewInvVect(wire.InvTypeBlock, hash)
+					invMsg.AddInvVect(iv)
+					p.QueueMessage(invMsg, doneChan)
+					p.continueHash = nil
+				} else if doneChan != nil {
+					doneChan <- struct{}{}
+				}
+			} else if doneChan != nil {
+				doneChan <- struct{}{}
+			}
 		} else if doneChan != nil {
 			doneChan <- struct{}{}
 		}
@@ -984,6 +1000,7 @@ func (p *peer) handleGetBlocksMsg(msg *wire.MsgGetBlocks) {
 			hashCopy := hash
 			iv := wire.NewInvVect(wire.InvTypeBlock, &hashCopy)
 			invMsg.AddInvVect(iv)
+			// TODO ppc: https://github.com/ppcoin/ppcoin/blob/v0.4.0ppc/src/main.cpp#L2957
 		}
 		start += int64(len(hashList))
 	}
