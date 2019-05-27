@@ -137,9 +137,9 @@ var MainNetParams = Params{
 		{30583, newShaHashFromStr("d39d1481a7eecba48932ea5913be58ad3894c7ee6d5a8ba8abeb772c66a6696e")},
 		{99999, newShaHashFromStr("27fd5e1de16a4270eb8c68dee2754a64da6312c7c3a0e99a7e6776246be1ee3f")},
 		{19999, newShaHashFromStr("ab0dad4b10d2370f009ed6df6effca1ba42f01d5070d6b30afeedf6463fbe7a2")},
-        {336000, newShaHashFromStr("4d261cef6e61a5ed8325e560f1d6e36f4698853a4c7134677f47a1d1d842bdf6")},
-        {371850, newShaHashFromStr("6b18adcb0a6e080dae85b74eee2b83fabb157bbea64fab0ed2192b2f6d5b89f3")},
-        {407813, newShaHashFromStr("00000000000000012730b0f48bed8afbeb08164c9d63597afb082e82ea05cec9")},
+		{336000, newShaHashFromStr("4d261cef6e61a5ed8325e560f1d6e36f4698853a4c7134677f47a1d1d842bdf6")},
+		{371850, newShaHashFromStr("6b18adcb0a6e080dae85b74eee2b83fabb157bbea64fab0ed2192b2f6d5b89f3")},
+		{407813, newShaHashFromStr("00000000000000012730b0f48bed8afbeb08164c9d63597afb082e82ea05cec9")},
 		{420000, newShaHashFromStr("fa3fefef369f7f9f0e1b879f42674e8fdfaa88d0172caf1ce67eafed5e684706")},
 	},
 
