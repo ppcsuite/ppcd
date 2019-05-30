@@ -53,18 +53,22 @@ type TransactionInput struct {
 
 // CreateRawTransactionCmd defines the createrawtransaction JSON-RPC command.
 type CreateRawTransactionCmd struct {
-	Inputs  []TransactionInput
-	Amounts map[string]float64 `jsonrpcusage:"{\"address\":amount,...}"` // In BTC
+	Inputs   []TransactionInput
+	Amounts  map[string]float64 `jsonrpcusage:"{\"address\":amount,...}"` // In BTC
+	LockTime *int64
 }
 
 // NewCreateRawTransactionCmd returns a new instance which can be used to issue
 // a createrawtransaction JSON-RPC command.
 //
 // Amounts are in BTC.
-func NewCreateRawTransactionCmd(inputs []TransactionInput, amounts map[string]float64) *CreateRawTransactionCmd {
+func NewCreateRawTransactionCmd(inputs []TransactionInput, amounts map[string]float64,
+	lockTime *int64) *CreateRawTransactionCmd {
+
 	return &CreateRawTransactionCmd{
-		Inputs:  inputs,
-		Amounts: amounts,
+		Inputs:   inputs,
+		Amounts:  amounts,
+		LockTime: lockTime,
 	}
 }
 
@@ -169,6 +173,21 @@ type GetBlockHashCmd struct {
 func NewGetBlockHashCmd(index int64) *GetBlockHashCmd {
 	return &GetBlockHashCmd{
 		Index: index,
+	}
+}
+
+// GetBlockHeaderCmd defines the getblockheader JSON-RPC command.
+type GetBlockHeaderCmd struct {
+	Hash    string
+	Verbose *bool `jsonrpcdefault:"true"`
+}
+
+// NewGetBlockHeaderCmd returns a new instance which can be used to issue a
+// getblockheader JSON-RPC command.
+func NewGetBlockHeaderCmd(hash string, verbose *bool) *GetBlockHeaderCmd {
+	return &GetBlockHeaderCmd{
+		Hash:    hash,
+		Verbose: verbose,
 	}
 }
 
@@ -530,10 +549,13 @@ func NewReconsiderBlockCmd(blockHash string) *ReconsiderBlockCmd {
 
 // SearchRawTransactionsCmd defines the searchrawtransactions JSON-RPC command.
 type SearchRawTransactionsCmd struct {
-	Address string
-	Verbose *int `jsonrpcdefault:"1"`
-	Skip    *int `jsonrpcdefault:"0"`
-	Count   *int `jsonrpcdefault:"100"`
+	Address     string
+	Verbose     *int  `jsonrpcdefault:"1"`
+	Skip        *int  `jsonrpcdefault:"0"`
+	Count       *int  `jsonrpcdefault:"100"`
+	VinExtra    *int  `jsonrpcdefault:"0"`
+	Reverse     *bool `jsonrpcdefault:"false"`
+	FilterAddrs *[]string
 }
 
 // NewSearchRawTransactionsCmd returns a new instance which can be used to issue a
@@ -541,12 +563,15 @@ type SearchRawTransactionsCmd struct {
 //
 // The parameters which are pointers indicate they are optional.  Passing nil
 // for optional parameters will use the default value.
-func NewSearchRawTransactionsCmd(address string, verbose, skip, count *int) *SearchRawTransactionsCmd {
+func NewSearchRawTransactionsCmd(address string, verbose, skip, count *int, vinExtra *int, reverse *bool, filterAddrs *[]string) *SearchRawTransactionsCmd {
 	return &SearchRawTransactionsCmd{
-		Address: address,
-		Verbose: verbose,
-		Skip:    skip,
-		Count:   count,
+		Address:     address,
+		Verbose:     verbose,
+		Skip:        skip,
+		Count:       count,
+		VinExtra:    vinExtra,
+		Reverse:     reverse,
+		FilterAddrs: filterAddrs,
 	}
 }
 
@@ -695,6 +720,7 @@ func init() {
 	MustRegisterCmd("getblockchaininfo", (*GetBlockChainInfoCmd)(nil), flags)
 	MustRegisterCmd("getblockcount", (*GetBlockCountCmd)(nil), flags)
 	MustRegisterCmd("getblockhash", (*GetBlockHashCmd)(nil), flags)
+	MustRegisterCmd("getblockheader", (*GetBlockHeaderCmd)(nil), flags)
 	MustRegisterCmd("getblocktemplate", (*GetBlockTemplateCmd)(nil), flags)
 	MustRegisterCmd("getchaintips", (*GetChainTipsCmd)(nil), flags)
 	MustRegisterCmd("getconnectioncount", (*GetConnectionCountCmd)(nil), flags)

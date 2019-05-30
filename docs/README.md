@@ -4,6 +4,7 @@
     1. [Installation](#Installation)
         1. [Windows](#WindowsInstallation)
         2. [Linux/BSD/MacOSX/POSIX](#PosixInstallation)
+          1. [Gentoo Linux](#GentooInstallation)
     2. [Configuration](#Configuration)
     3. [Controlling and Querying btcd via btcctl](#BtcctlConfig)
     4. [Mining](#Mining)
@@ -76,6 +77,14 @@ details on how to install on the supported operating systems.
 * Run the following command to obtain btcd, its dependencies, and install it: `$ go get github.com/ppcsuite/ppcd/...`<br />
   * To upgrade, run the following command: `$ go get -u github.com/ppcsuite/ppcd/...`
 * Run btcd: `$ btcd`
+
+<a name="GentooInstallation" />
+**2.1.2.1 Gentoo Linux Installation**<br />
+
+* Install Layman and enable the Bitcoin overlay.
+  * https://gitlab.com/bitcoin/gentoo
+* Copy or symlink `/var/lib/layman/bitcoin/Documentation/package.keywords/btcd-live` to `/etc/portage/package.keywords/`
+* Install btcd: `$ emerge net-p2p/btcd`
 
 <a name="Configuration" />
 **2.2 Configuration**<br />
@@ -201,12 +210,11 @@ information.
 	  robust and easy to use Websocket-enabled Bitcoin JSON-RPC client
     * [btcjson](https://github.com/btcsuite/btcjson) - Provides an extensive API
 	  for the underlying JSON-RPC command and return values
-    * [btcws](https://github.com/btcsuite/btcws) - Custom types for btcd
-	  websocket extension commands (registers the extension commands with
-	  [btcjson](https://github.com/btcsuite/btcjson))
-    * [wire](https://github.com/ppcsuite/ppcd/tree/master/wire) - Implements the
+    * [wire](https://github.com/btcsuite/btcd/tree/master/wire) - Implements the
 	  Bitcoin wire protocol
-    * [blockchain](https://github.com/ppcsuite/ppcd/tree/master/blockchain) -
+    * [peer](https://github.com/btcsuite/btcd/tree/master/peer) -
+	  Provides a common base for creating and managing Bitcoin network peers.
+    * [blockchain](https://github.com/btcsuite/btcd/tree/master/blockchain) -
 	  Implements Bitcoin block handling and chain selection rules
     * [txscript](https://github.com/ppcsuite/ppcd/tree/master/txscript) -
 	  Implements the Bitcoin transaction scripting language

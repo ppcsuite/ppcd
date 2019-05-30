@@ -5,8 +5,7 @@ txscript
 (https://travis-ci.org/ppcsuite/ppcd)
 
 Package txscript implements the bitcoin transaction script language.  There is
-a comprehensive test suite.  Package txscript is licensed under the liberal ISC
-license.
+a comprehensive test suite.
 
 This package has intentionally been designed so it can be used as a standalone
 package for any projects needing to use or validate bitcoin transaction scripts.
@@ -75,4 +74,5 @@ verify the signature perform the following:
 
 ## License
 
-Package txscript is licensed under the liberal ISC License.
+Package txscript is licensed under the [copyfree](http://copyfree.org) ISC
+License.

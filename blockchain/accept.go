@@ -34,7 +34,7 @@ func (b *BlockChain) maybeAcceptBlock(block *btcutil.Block, timeSource MedianTim
 
 	// The height of this block is one more than the referenced previous
 	// block.
-	blockHeight := int64(0)
+	blockHeight := int32(0)
 	if prevNode != nil {
 		blockHeight = prevNode.height + 1
 	}

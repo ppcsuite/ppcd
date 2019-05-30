@@ -52,11 +52,24 @@ var helpDescsEnUS = map[string]string{
 	"createrawtransaction-amounts--key":   "address",
 	"createrawtransaction-amounts--value": "n.nnn",
 	"createrawtransaction-amounts--desc":  "The destination address as the key and the amount in BTC as the value",
+	"createrawtransaction-locktime":       "Locktime value; a non-zero value will also locktime-activate the inputs",
 	"createrawtransaction--result0":       "Hex-encoded bytes of the serialized transaction",
 
 	// ScriptSig help.
 	"scriptsig-asm": "Disassembly of the script",
 	"scriptsig-hex": "Hex-encoded bytes of the script",
+
+	// PrevOut help.
+	"prevout-addresses": "previous output addresses",
+	"prevout-value":     "previous output value",
+
+	// VinPrevOut help.
+	"vinprevout-coinbase":  "The hex-encoded bytes of the signature script (coinbase txns only)",
+	"vinprevout-txid":      "The hash of the origin transaction (non-coinbase txns only)",
+	"vinprevout-vout":      "The index of the output being redeemed from the origin transaction (non-coinbase txns only)",
+	"vinprevout-scriptSig": "The signature script used to redeem the origin transaction as a JSON object (non-coinbase txns only)",
+	"vinprevout-prevOut":   "Data from the origin transaction output with index vout.",
+	"vinprevout-sequence":  "The script sequence number",
 
 	// Vin help.
 	"vin-coinbase":  "The hex-encoded bytes of the signature script (coinbase txns only)",
@@ -155,6 +168,18 @@ var helpDescsEnUS = map[string]string{
 	"txrawresult-time":          "Transaction time in seconds since 1 Jan 1970 GMT",
 	"txrawresult-blocktime":     "Block time in seconds since the 1 Jan 1970 GMT",
 
+	// SearchRawTransactionsResult help.
+	"searchrawtransactionsresult-hex":           "Hex-encoded transaction",
+	"searchrawtransactionsresult-txid":          "The hash of the transaction",
+	"searchrawtransactionsresult-version":       "The transaction version",
+	"searchrawtransactionsresult-locktime":      "The transaction lock time",
+	"searchrawtransactionsresult-vin":           "The transaction inputs as JSON objects",
+	"searchrawtransactionsresult-vout":          "The transaction outputs as JSON objects",
+	"searchrawtransactionsresult-blockhash":     "Hash of the block the transaction is part of",
+	"searchrawtransactionsresult-confirmations": "Number of confirmations of the block",
+	"searchrawtransactionsresult-time":          "Transaction time in seconds since 1 Jan 1970 GMT",
+	"searchrawtransactionsresult-blocktime":     "Block time in seconds since the 1 Jan 1970 GMT",
+
 	// GetBlockVerboseResult help.
 	"getblockverboseresult-hash":              "The hash of the block (same as provided)",
 	"getblockverboseresult-confirmations":     "The number of confirmations",
@@ -179,6 +204,27 @@ var helpDescsEnUS = map[string]string{
 	"getblockhash--synopsis": "Returns hash of the block in best block chain at the given height.",
 	"getblockhash-index":     "The block height",
 	"getblockhash--result0":  "The block hash",
+
+	// GetBlockHeaderCmd help.
+	"getblockheader--synopsis":   "Returns information about a block header given its hash.",
+	"getblockheader-hash":        "The hash of the block",
+	"getblockheader-verbose":     "Specifies the block header is returned as a JSON object instead of hex-encoded string",
+	"getblockheader--condition0": "verbose=false",
+	"getblockheader--condition1": "verbose=true",
+	"getblockheader--result0":    "The block header hash",
+
+	// GetBlockHeaderVerboseResult help.
+	"getblockheaderverboseresult-hash":              "The hash of the block (same as provided)",
+	"getblockheaderverboseresult-confirmations":     "The number of confirmations",
+	"getblockheaderverboseresult-height":            "The height of the block in the block chain",
+	"getblockheaderverboseresult-version":           "The block version",
+	"getblockheaderverboseresult-merkleroot":        "Root hash of the merkle tree",
+	"getblockheaderverboseresult-time":              "The block time in seconds since 1 Jan 1970 GMT",
+	"getblockheaderverboseresult-nonce":             "The block nonce",
+	"getblockheaderverboseresult-bits":              "The bits which represent the block difficulty",
+	"getblockheaderverboseresult-difficulty":        "The proof-of-work difficulty as a multiple of the minimum difficulty",
+	"getblockheaderverboseresult-previousblockhash": "The hash of the previous block",
+	"getblockheaderverboseresult-nextblockhash":     "The hash of the next block (only if there is one)",
 
 	// TemplateRequest help.
 	"templaterequest-mode":         "This is 'template', 'proposal', or omitted",
@@ -420,10 +466,13 @@ var helpDescsEnUS = map[string]string{
 		"Similarly, until the address index has caught up with the current best height, all requests will return an error response in order to avoid serving stale data.",
 	"searchrawtransactions-address":     "The Bitcoin address to search for",
 	"searchrawtransactions-verbose":     "Specifies the transaction is returned as a JSON object instead of hex-encoded string",
-	"searchrawtransactions-skip":        "The number of leading transactions to leave out of the final response",
-	"searchrawtransactions-count":       "The maximum number of transactions to return",
 	"searchrawtransactions--condition0": "verbose=0",
 	"searchrawtransactions--condition1": "verbose=1",
+	"searchrawtransactions-skip":        "The number of leading transactions to leave out of the final response",
+	"searchrawtransactions-count":       "The maximum number of transactions to return",
+	"searchrawtransactions-vinextra":    "Specify that extra data from previous output will be returned in vin",
+	"searchrawtransactions-reverse":     "Specifies that the transactions should be returned in reverse chronological order",
+	"searchrawtransactions-filteraddrs": "Address list.  Only inputs or outputs with matching address will be returned",
 	"searchrawtransactions--result0":    "Hex-encoded serialized transaction",
 
 	// SendRawTransactionCmd help.
@@ -478,6 +527,10 @@ var helpDescsEnUS = map[string]string{
 	"verifymessage--result0":  "Whether or not the signature verified",
 
 	// -------- Websocket-specific help --------
+
+	// Session help.
+	"session--synopsis":       "Return details regarding a websocket client's current connection session.",
+	"sessionresult-sessionid": "The unique session ID for a client's websocket connection.",
 
 	// NotifyBlocksCmd help.
 	"notifyblocks--synopsis": "Request notifications for whenever a block is connected or disconnected from the main (best) chain.",
@@ -560,6 +613,7 @@ var rpcResultTypes = map[string][]interface{}{
 	"getblock":              []interface{}{(*string)(nil), (*btcjson.GetBlockVerboseResult)(nil)},
 	"getblockcount":         []interface{}{(*int64)(nil)},
 	"getblockhash":          []interface{}{(*string)(nil)},
+	"getblockheader":        []interface{}{(*string)(nil), (*btcjson.GetBlockHeaderVerboseResult)(nil)},
 	"getblocktemplate":      []interface{}{(*btcjson.GetBlockTemplateResult)(nil), (*string)(nil), nil},
 	"getconnectioncount":    []interface{}{(*int32)(nil)},
 	"getcurrentnet":         []interface{}{(*uint32)(nil)},
@@ -579,7 +633,7 @@ var rpcResultTypes = map[string][]interface{}{
 	"node":                  nil,
 	"help":                  []interface{}{(*string)(nil), (*string)(nil)},
 	"ping":                  nil,
-	"searchrawtransactions": []interface{}{(*string)(nil), (*[]btcjson.TxRawResult)(nil)},
+	"searchrawtransactions": []interface{}{(*string)(nil), (*[]btcjson.SearchRawTransactionsResult)(nil)},
 	"sendrawtransaction":    []interface{}{(*string)(nil)},
 	"setgenerate":           nil,
 	"stop":                  []interface{}{(*string)(nil)},
@@ -589,6 +643,7 @@ var rpcResultTypes = map[string][]interface{}{
 	"verifymessage":         []interface{}{(*bool)(nil)},
 
 	// Websocket commands.
+	"session":                   []interface{}{(*btcjson.SessionResult)(nil)},
 	"notifyblocks":              nil,
 	"stopnotifyblocks":          nil,
 	"notifynewtransactions":     nil,

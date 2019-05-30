@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	// maxDataCarrierSize is the maximum number of bytes allowed in pushed
+	// MaxDataCarrierSize is the maximum number of bytes allowed in pushed
 	// data to be considered a nulldata transaction
-	maxDataCarrierSize = 80
+	MaxDataCarrierSize = 80
 
 	// StandardVerifyFlags are the script flags which are used when
 	// executing transaction scripts to enforce additional checks which
@@ -30,7 +30,9 @@ const (
 		ScriptVerifyMinimalData |
 		ScriptStrictMultiSig |
 		ScriptDiscourageUpgradableNops |
-		ScriptVerifyCleanStack
+		ScriptVerifyCleanStack |
+		ScriptVerifyCheckLockTimeVerify |
+		ScriptVerifyLowS
 )
 
 // ScriptClass is an enumeration for the list of standard types of script.
@@ -106,6 +108,13 @@ func isMultiSig(pops []parsedOpcode) bool {
 	if pops[l-1].opcode.value != OP_CHECKMULTISIG {
 		return false
 	}
+
+	// Verify the number of pubkeys specified matches the actual number
+	// of pubkeys provided.
+	if l-2-1 != asSmallInt(pops[l-2].opcode) {
+		return false
+	}
+
 	for _, pop := range pops[1 : l-2] {
 		// Valid pubkeys are either 33 or 65 bytes.
 		if len(pop.data) != 33 && len(pop.data) != 65 {
@@ -120,7 +129,7 @@ func isMultiSig(pops []parsedOpcode) bool {
 func isNullData(pops []parsedOpcode) bool {
 	// A nulldata transaction is either a single OP_RETURN or an
 	// OP_RETURN SMALLDATA (where SMALLDATA is a data push up to
-	// maxDataCarrierSize bytes).
+	// MaxDataCarrierSize bytes).
 	l := len(pops)
 	if l == 1 && pops[0].opcode.value == OP_RETURN {
 		return true
@@ -129,7 +138,7 @@ func isNullData(pops []parsedOpcode) bool {
 	return l == 2 &&
 		pops[0].opcode.value == OP_RETURN &&
 		pops[1].opcode.value <= OP_PUSHDATA4 &&
-		len(pops[1].data) <= maxDataCarrierSize
+		len(pops[1].data) <= MaxDataCarrierSize
 }
 
 // scriptType returns the type of the script being inspected from the known

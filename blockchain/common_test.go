@@ -116,7 +116,7 @@ func chainSetup(dbName string) (*blockchain.BlockChain, func(), error) {
 		return nil, nil, err
 	}
 
-	chain := blockchain.New(db, &chaincfg.MainNetParams, nil)
+	chain := blockchain.New(db, &chaincfg.MainNetParams, nil, nil)
 	return chain, teardown, nil
 }
 
@@ -184,7 +184,7 @@ func loadTxStore(filename string) (blockchain.TxStore, error) {
 		if err != nil {
 			return nil, err
 		}
-		txD.BlockHeight = int64(uintBuf)
+		txD.BlockHeight = int32(uintBuf)
 
 		// Num spent bits.
 		err = binary.Read(r, binary.LittleEndian, &uintBuf)

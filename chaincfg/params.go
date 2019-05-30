@@ -11,17 +11,6 @@ import (
 	"github.com/ppcsuite/ppcd/wire"
 )
 
-// Peercoin https://github.com/ppcoin/ppcoin/blob/v0.4.0ppc/src/main.cpp#L2230
-// if (fTestNet)
-// {
-// 	hashGenesisBlock = hashGenesisBlockTestNet;
-// 	bnProofOfWorkLimit = CBigNum(~uint256(0) >> 28);
-// 	nStakeMinAge = 60 * 60 * 24; // test net min age is 1 day
-// 	nCoinbaseMaturity = 60;
-// 	bnInitialHashTarget = CBigNum(~uint256(0) >> 29);
-// 	nModifierInterval = 60 * 20; // test net modifier interval is 20 minutes
-// }
-
 // These variables are the chain proof-of-work limit parameters for each default
 // network.
 var (
@@ -55,7 +44,7 @@ var (
 // documentation for btcchain.IsCheckpointCandidate for details on the selection
 // criteria.
 type Checkpoint struct {
-	Height int64
+	Height int32
 	Hash   *wire.ShaHash
 }
 
@@ -66,6 +55,7 @@ type Params struct {
 	Name        string
 	Net         wire.BitcoinNet
 	DefaultPort string
+	DNSSeeds    []string
 
 	// Chain parameters
 	GenesisBlock           *wire.MsgBlock
@@ -123,6 +113,12 @@ var MainNetParams = Params{
 	Name:        "mainnet",
 	Net:         wire.MainNet,
 	DefaultPort: "9901",
+	DNSSeeds: []string{
+		"seed.peercoin.net",
+		"seed2.peercoin.net",
+		"seed.peercoin-library.org",
+		"ppcseed.ns.7server.net",
+	},
 
 	// Chain parameters
 	GenesisBlock:           &genesisBlock,
@@ -192,7 +188,8 @@ var MainNetParams = Params{
 var RegressionNetParams = Params{
 	Name:        "regtest",
 	Net:         wire.TestNet,
-	DefaultPort: "18444",
+	DefaultPort: "9903",
+	DNSSeeds:    []string{},
 
 	// Chain parameters
 	GenesisBlock:           &regTestGenesisBlock,
@@ -234,13 +231,18 @@ var RegressionNetParams = Params{
 	HDCoinType: 1,
 }
 
-// TestNet3Params defines the network parameters for the test Bitcoin network
-// (version 3).  Not to be confused with the regression test network, this
+// TestNetParams defines the network parameters for the test Peercoin network
+// Not to be confused with the regression test network, this
 // network is sometimes simply called "testnet".
-var TestNet3Params = Params{
-	Name:        "testnet3",
-	Net:         wire.TestNet3,
+var TestNetParams = Params{
+	Name:        "testnet",
+	Net:         wire.TestNet,
 	DefaultPort: "9903",
+	DNSSeeds: []string{
+		"tseed.peercoin.net",
+		"tseed2.peercoin.net",
+		"tseed.peercoin-library.org",
+	},
 
 	// Chain parameters
 	GenesisBlock:           &testNet3GenesisBlock,
@@ -300,6 +302,7 @@ var SimNetParams = Params{
 	Name:        "simnet",
 	Net:         wire.SimNet,
 	DefaultPort: "18555",
+	DNSSeeds:    []string{}, // NOTE: There must NOT be any seeds.
 
 	// Chain parameters
 	GenesisBlock:           &simNetGenesisBlock,
@@ -356,28 +359,28 @@ var (
 var (
 	registeredNets = map[wire.BitcoinNet]struct{}{
 		MainNetParams.Net:       struct{}{},
-		TestNet3Params.Net:      struct{}{},
+		TestNetParams.Net:       struct{}{},
 		RegressionNetParams.Net: struct{}{},
 		SimNetParams.Net:        struct{}{},
 	}
 
 	pubKeyHashAddrIDs = map[byte]struct{}{
-		MainNetParams.PubKeyHashAddrID:  struct{}{},
-		TestNet3Params.PubKeyHashAddrID: struct{}{}, // shared with regtest
-		SimNetParams.PubKeyHashAddrID:   struct{}{},
+		MainNetParams.PubKeyHashAddrID: struct{}{},
+		TestNetParams.PubKeyHashAddrID: struct{}{}, // shared with regtest
+		SimNetParams.PubKeyHashAddrID:  struct{}{},
 	}
 
 	scriptHashAddrIDs = map[byte]struct{}{
-		MainNetParams.ScriptHashAddrID:  struct{}{},
-		TestNet3Params.ScriptHashAddrID: struct{}{}, // shared with regtest
-		SimNetParams.ScriptHashAddrID:   struct{}{},
+		MainNetParams.ScriptHashAddrID: struct{}{},
+		TestNetParams.ScriptHashAddrID: struct{}{}, // shared with regtest
+		SimNetParams.ScriptHashAddrID:  struct{}{},
 	}
 
 	// Testnet is shared with regtest.
 	hdPrivToPubKeyIDs = map[[4]byte][]byte{
-		MainNetParams.HDPrivateKeyID:  MainNetParams.HDPublicKeyID[:],
-		TestNet3Params.HDPrivateKeyID: TestNet3Params.HDPublicKeyID[:],
-		SimNetParams.HDPrivateKeyID:   SimNetParams.HDPublicKeyID[:],
+		MainNetParams.HDPrivateKeyID: MainNetParams.HDPublicKeyID[:],
+		TestNetParams.HDPrivateKeyID: TestNetParams.HDPublicKeyID[:],
+		SimNetParams.HDPrivateKeyID:  SimNetParams.HDPublicKeyID[:],
 	}
 )
 
