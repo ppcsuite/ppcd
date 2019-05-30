@@ -48,14 +48,11 @@ const (
 )
 
 var (
-<<<<<<< HEAD
-=======
 	// coinbaseMaturity is the internal variable used for validating the
 	// spending of coinbase outputs.  A variable rather than the exported
 	// constant is used because the tests need the ability to modify it.
 	coinbaseMaturity = int32(CoinbaseMaturity)
 
->>>>>>> BTCD_0_12_0_BETA
 	// zeroHash is the zero value for a wire.ShaHash and is defined as
 	// a package level variable to avoid the need to create a new instance
 	// every time a check is needed.
@@ -656,9 +653,6 @@ func (b *BlockChain) checkBlockHeaderContext(header *wire.BlockHeader, prevNode 
 	}
 
 	if !fastAdd {
-<<<<<<< HEAD
-		/* ppc:
-=======
 		// Reject version 3 blocks once a majority of the network has
 		// upgraded.  This is part of BIP0065.
 		if header.Version < 4 && b.isMajorityVersion(4, prevNode,
@@ -669,7 +663,6 @@ func (b *BlockChain) checkBlockHeaderContext(header *wire.BlockHeader, prevNode 
 			return ruleError(ErrBlockVersionTooOld, str)
 		}
 
->>>>>>> BTCD_0_12_0_BETA
 		// Reject version 2 blocks once a majority of the network has
 		// upgraded.  This is part of BIP0066.
 		if header.Version < 3 && b.isMajorityVersion(3, prevNode,
@@ -884,15 +877,7 @@ func (b *BlockChain) checkBIP0030(node *blockNode, block *btcutil.Block) error {
 // amount, and verifying the signatures to prove the spender was the owner of
 // the bitcoins and therefore allowed to spend them.  As it checks the inputs,
 // it also calculates the total fees for the transaction and returns that value.
-<<<<<<< HEAD
-func CheckTransactionInputs(tx *btcutil.Tx, txHeight int64, txStore TxStore,
-	blockChain *BlockChain) (int64, error) {
-
-	defer timeTrack(now(), fmt.Sprintf("CheckTransactionInputs(%v)", slice(tx.Sha())[0]))
-
-=======
 func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, txStore TxStore) (int64, error) {
->>>>>>> BTCD_0_12_0_BETA
 	// Coinbase transactions have no inputs.
 	if IsCoinBase(tx) {
 		return 0, nil
