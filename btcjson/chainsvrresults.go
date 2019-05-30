@@ -6,6 +6,23 @@ package btcjson
 
 import "encoding/json"
 
+// GetBlockHeaderVerboseResult models the data from the getblockheader command when
+// the verbose flag is set.  When the verbose flag is not set, getblockheader
+// returns a hex-encoded string.
+type GetBlockHeaderVerboseResult struct {
+	Hash          string  `json:"hash"`
+	Confirmations uint64  `json:"confirmations"`
+	Height        int32   `json:"height"`
+	Version       int32   `json:"version"`
+	MerkleRoot    string  `json:"merkleroot"`
+	Time          int64   `json:"time"`
+	Nonce         uint64  `json:"nonce"`
+	Bits          string  `json:"bits"`
+	Difficulty    float64 `json:"difficulty"`
+	PreviousHash  string  `json:"previousblockhash,omitempty"`
+	NextHash      string  `json:"nextblockhash,omitempty"`
+}
+
 // GetBlockVerboseResult models the data from the getblock command when the
 // verbose flag is set.  When the verbose flag is not set, getblock returns a
 // hex-encoded string.
@@ -255,6 +272,56 @@ func (v *Vin) MarshalJSON() ([]byte, error) {
 	return json.Marshal(txStruct)
 }
 
+// PrevOut represents previous output for an input Vin.
+type PrevOut struct {
+	Addresses []string `json:"addresses,omitempty"`
+	Value     float64  `json:"value"`
+}
+
+// VinPrevOut is like Vin except it includes PrevOut.  It is used by searchrawtransaction
+type VinPrevOut struct {
+	Coinbase  string     `json:"coinbase"`
+	Txid      string     `json:"txid"`
+	Vout      uint32     `json:"vout"`
+	ScriptSig *ScriptSig `json:"scriptSig"`
+	PrevOut   *PrevOut   `json:"prevOut"`
+	Sequence  uint32     `json:"sequence"`
+}
+
+// IsCoinBase returns a bool to show if a Vin is a Coinbase one or not.
+func (v *VinPrevOut) IsCoinBase() bool {
+	return len(v.Coinbase) > 0
+}
+
+// MarshalJSON provides a custom Marshal method for VinPrevOut.
+func (v *VinPrevOut) MarshalJSON() ([]byte, error) {
+	if v.IsCoinBase() {
+		coinbaseStruct := struct {
+			Coinbase string `json:"coinbase"`
+			Sequence uint32 `json:"sequence"`
+		}{
+			Coinbase: v.Coinbase,
+			Sequence: v.Sequence,
+		}
+		return json.Marshal(coinbaseStruct)
+	}
+
+	txStruct := struct {
+		Txid      string     `json:"txid"`
+		Vout      uint32     `json:"vout"`
+		ScriptSig *ScriptSig `json:"scriptSig"`
+		PrevOut   *PrevOut   `json:"prevOut,omitempty"`
+		Sequence  uint32     `json:"sequence"`
+	}{
+		Txid:      v.Txid,
+		Vout:      v.Vout,
+		ScriptSig: v.ScriptSig,
+		PrevOut:   v.PrevOut,
+		Sequence:  v.Sequence,
+	}
+	return json.Marshal(txStruct)
+}
+
 // Vout models parts of the tx data.  It is defined seperately since both
 // getrawtransaction and decoderawtransaction use the same structure.
 type Vout struct {
@@ -297,6 +364,7 @@ type InfoChainResult struct {
 	Difficulty      float64 `json:"difficulty"`
 	TestNet         bool    `json:"testnet"`
 	RelayFee        float64 `json:"relayfee"`
+	Errors          string  `json:"errors"`
 }
 
 // LocalAddressesResult models the localaddresses data from the getnetworkinfo
@@ -315,8 +383,7 @@ type NetworksResult struct {
 	Proxy     string `json:"proxy"`
 }
 
-// TxRawResult models the data from the getrawtransaction and
-// searchrawtransaction commands.
+// TxRawResult models the data from the getrawtransaction command.
 type TxRawResult struct {
 	Hex           string `json:"hex"`
 	Txid          string `json:"txid"`
@@ -328,6 +395,21 @@ type TxRawResult struct {
 	Confirmations uint64 `json:"confirmations,omitempty"`
 	Time          int64  `json:"time,omitempty"`
 	Blocktime     int64  `json:"blocktime,omitempty"`
+}
+
+// SearchRawTransactionsResult models the data from the searchrawtransaction
+// command.
+type SearchRawTransactionsResult struct {
+	Hex           string       `json:"hex,omitempty"`
+	Txid          string       `json:"txid"`
+	Version       int32        `json:"version"`
+	LockTime      uint32       `json:"locktime"`
+	Vin           []VinPrevOut `json:"vin"`
+	Vout          []Vout       `json:"vout"`
+	BlockHash     string       `json:"blockhash,omitempty"`
+	Confirmations uint64       `json:"confirmations,omitempty"`
+	Time          int64        `json:"time,omitempty"`
+	Blocktime     int64        `json:"blocktime,omitempty"`
 }
 
 // TxRawDecodeResult models the data from the decoderawtransaction command.

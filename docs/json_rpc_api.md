@@ -157,27 +157,28 @@ the method name for further details such as parameter and return information.
 |7|[getblock](#getblock)|Y|Returns information about a block given its hash.|
 |8|[getblockcount](#getblockcount)|Y|Returns the number of blocks in the longest block chain.|
 |9|[getblockhash](#getblockhash)|Y|Returns hash of the block in best block chain at the given height.|
-|10|[getconnectioncount](#getconnectioncount)|N|Returns the number of active connections to other peers.|
-|11|[getdifficulty](#getdifficulty)|Y|Returns the proof-of-work difficulty as a multiple of the minimum difficulty.|
-|12|[getgenerate](#getgenerate)|N|Return if the server is set to generate coins (mine) or not.|
-|13|[gethashespersec](#gethashespersec)|N|Returns a recent hashes per second performance measurement while generating coins (mining).|
-|14|[getinfo](#getinfo)|Y|Returns a JSON object containing various state info.|
-|15|[getmempoolinfo](#getmempoolinfo)|N|Returns a JSON object containing mempool-related information.|
-|16|[getmininginfo](#getmininginfo)|N|Returns a JSON object containing mining-related information.|
-|17|[getnettotals](#getnettotals)|Y|Returns a JSON object containing network traffic statistics.|
-|18|[getnetworkhashps](#getnetworkhashps)|Y|Returns the estimated network hashes per second for the block heights provided by the parameters.|
-|19|[getpeerinfo](#getpeerinfo)|N|Returns information about each connected network peer as an array of json objects.|
-|20|[getrawmempool](#getrawmempool)|Y|Returns an array of hashes for all of the transactions currently in the memory pool.|
-|21|[getrawtransaction](#getrawtransaction)|Y|Returns information about a transaction given its hash.|
-|22|[getwork](#getwork)|N|Returns formatted hash data to work on or checks and submits solved data.<br /><font color="orange">NOTE: Since btcd does not have the wallet integrated to provide payment addresses, btcd must be configured via the `--miningaddr` option to provide which payment addresses to pay created blocks to for this RPC to function.</font>|
-|23|[help](#help)|Y|Returns a list of all commands or help for a specified command.|
-|24|[ping](#ping)|N|Queues a ping to be sent to each connected peer.|
-|25|[sendrawtransaction](#sendrawtransaction)|Y|Submits the serialized, hex-encoded transaction to the local peer and relays it to the network.<br /><font color="orange">btcd does not yet implement the `allowhighfees` parameter, so it has no effect</font>|
-|26|[setgenerate](#setgenerate) |N|Set the server to generate coins (mine) or not.<br/>NOTE: Since btcd does not have the wallet integrated to provide payment addresses, btcd must be configured via the `--miningaddr` option to provide which payment addresses to pay created blocks to for this RPC to function.|
-|27|[stop](#stop)|N|Shutdown btcd.|
-|28|[submitblock](#submitblock)|Y|Attempts to submit a new serialized, hex-encoded block to the network.|
-|29|[validateaddress](#validateaddress)|Y|Verifies the given address is valid.  NOTE: Since btcd does not have a wallet integrated, btcd will only return whether the address is valid or not.|
-|30|[verifychain](#verifychain)|N|Verifies the block chain database.|
+|10|[getblockheader](#getblockheader)|Y|Returns the block header of the block.|
+|11|[getconnectioncount](#getconnectioncount)|N|Returns the number of active connections to other peers.|
+|12|[getdifficulty](#getdifficulty)|Y|Returns the proof-of-work difficulty as a multiple of the minimum difficulty.|
+|13|[getgenerate](#getgenerate)|N|Return if the server is set to generate coins (mine) or not.|
+|14|[gethashespersec](#gethashespersec)|N|Returns a recent hashes per second performance measurement while generating coins (mining).|
+|15|[getinfo](#getinfo)|Y|Returns a JSON object containing various state info.|
+|16|[getmempoolinfo](#getmempoolinfo)|N|Returns a JSON object containing mempool-related information.|
+|17|[getmininginfo](#getmininginfo)|N|Returns a JSON object containing mining-related information.|
+|18|[getnettotals](#getnettotals)|Y|Returns a JSON object containing network traffic statistics.|
+|19|[getnetworkhashps](#getnetworkhashps)|Y|Returns the estimated network hashes per second for the block heights provided by the parameters.|
+|20|[getpeerinfo](#getpeerinfo)|N|Returns information about each connected network peer as an array of json objects.|
+|21|[getrawmempool](#getrawmempool)|Y|Returns an array of hashes for all of the transactions currently in the memory pool.|
+|22|[getrawtransaction](#getrawtransaction)|Y|Returns information about a transaction given its hash.|
+|23|[getwork](#getwork)|N|Returns formatted hash data to work on or checks and submits solved data.<br /><font color="orange">NOTE: Since btcd does not have the wallet integrated to provide payment addresses, btcd must be configured via the `--miningaddr` option to provide which payment addresses to pay created blocks to for this RPC to function.</font>|
+|24|[help](#help)|Y|Returns a list of all commands or help for a specified command.|
+|25|[ping](#ping)|N|Queues a ping to be sent to each connected peer.|
+|26|[sendrawtransaction](#sendrawtransaction)|Y|Submits the serialized, hex-encoded transaction to the local peer and relays it to the network.<br /><font color="orange">btcd does not yet implement the `allowhighfees` parameter, so it has no effect</font>|
+|27|[setgenerate](#setgenerate) |N|Set the server to generate coins (mine) or not.<br/>NOTE: Since btcd does not have the wallet integrated to provide payment addresses, btcd must be configured via the `--miningaddr` option to provide which payment addresses to pay created blocks to for this RPC to function.|
+|28|[stop](#stop)|N|Shutdown btcd.|
+|29|[submitblock](#submitblock)|Y|Attempts to submit a new serialized, hex-encoded block to the network.|
+|30|[validateaddress](#validateaddress)|Y|Verifies the given address is valid.  NOTE: Since btcd does not have a wallet integrated, btcd will only return whether the address is valid or not.|
+|31|[verifychain](#verifychain)|N|Verifies the block chain database.|
 
 <a name="MethodDetails" />
 **5.2 Method Details**<br />
@@ -198,10 +199,10 @@ the method name for further details such as parameter and return information.
 |   |   |
 |---|---|
 |Method|createrawtransaction|
-|Parameters|1. transaction inputs (JSON array, required) - json array of json objects<br />`[`<br />&nbsp;&nbsp;`{`<br />&nbsp;&nbsp;&nbsp;&nbsp;`"txid": "hash", (string, required) the hash of the input transaction`<br />&nbsp;&nbsp;&nbsp;&nbsp;`"vout": n  (numeric, required) the specific output of the input transaction to redeem`<br />&nbsp;&nbsp;`}, ...`<br />`]`<br />2. addresses and amounts (JSON object, required) - json object with addresses as keys and amounts as values<br />`{`<br />&nbsp;&nbsp;`"address": n.nnn (numeric, required) the address to send to as the key and the amount in BTC as the value`<br />&nbsp;&nbsp;`, ...`<br />`}`|
+|Parameters|1. transaction inputs (JSON array, required) - json array of json objects<br />`[`<br />&nbsp;&nbsp;`{`<br />&nbsp;&nbsp;&nbsp;&nbsp;`"txid": "hash", (string, required) the hash of the input transaction`<br />&nbsp;&nbsp;&nbsp;&nbsp;`"vout": n  (numeric, required) the specific output of the input transaction to redeem`<br />&nbsp;&nbsp;`}, ...`<br />`]`<br />2. addresses and amounts (JSON object, required) - json object with addresses as keys and amounts as values<br />`{`<br />&nbsp;&nbsp;`"address": n.nnn (numeric, required) the address to send to as the key and the amount in BTC as the value`<br />&nbsp;&nbsp;`, ...`<br />`}`<br />3. locktime (int64, optional, default=0) - specifies the transaction locktime.  If non-zero, the inputs will also have their locktimes activated. |
 |Description|Returns a new transaction spending the provided inputs and sending to the provided addresses.<br />The transaction inputs are not signed in the created transaction.<br />The `signrawtransaction` RPC command provided by wallet must be used to sign the resulting transaction.|
 |Returns|`"transaction" (string) hex-encoded bytes of the serialized transaction`|
-|Example Parameters|1. transaction inputs `[{"txid":"e6da89de7a6b8508ce8f371a3d0535b04b5e108cb1a6e9284602d3bfd357c018","vout":1}]`<br />2. addresses and amounts `{"13cgrTP7wgbZYWrY9BZ22BV6p82QXQT3nY": 0.49213337}`|
+|Example Parameters|1. transaction inputs `[{"txid":"e6da89de7a6b8508ce8f371a3d0535b04b5e108cb1a6e9284602d3bfd357c018","vout":1}]`<br />2. addresses and amounts `{"13cgrTP7wgbZYWrY9BZ22BV6p82QXQT3nY": 0.49213337}`<br />3. locktime `0`|
 |Example Return|`010000000118c057d3bfd3024628e9a6b18c105e4bb035053d1a378fce08856b7ade89dae6010000`<br />`0000ffffffff0199efee02000000001976a9141cb013db35ecccc156fdfd81d03a11c51998f99388`<br />`ac00000000`<br /><font color="orange">**Newlines added for display purposes.  The actual return does not contain newlines.**</font>|
 [Return to Overview](#MethodOverview)<br />
 
@@ -213,7 +214,7 @@ the method name for further details such as parameter and return information.
 |Method|decoderawtransaction|
 |Parameters|1. data (string, required) - serialized, hex-encoded transaction|
 |Description|Returns a JSON object representing the provided serialized, hex-encoded transaction.|
-|Returns|`{ (json object)`<br />&nbsp;&nbsp;`"txid": "hash",  (string) the hash of the transaction`<br />&nbsp;&nbsp;`"version": n,  (numeric) the transaction version`<br />&nbsp;&nbsp;`"locktime": n,  (numeric) the transaction lock time`<br />&nbsp;&nbsp;`"vin": [  (array of json objects) the transaction inputs as json objects`<br />&nbsp;&nbsp;<font color="orange">For coinbase transactions:</font><br />&nbsp;&nbsp;&nbsp;&nbsp;`{ (json object)`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"coinbase": "data",  (string) the hex-dencoded bytes of the signature script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"sequence": n,  (numeric) the script sequence number`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;<font color="orange">For non-coinbase transactions:</font><br />&nbsp;&nbsp;&nbsp;&nbsp;`{ (json object)`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"txid": "hash", (string) the hash of the origin transaction`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"vout": n, (numeric) the index of the output being redeemed from the origin transaction`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"scriptSig": { (json object) the signature script used to redeem the origin transaction`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"asm": "asm", (string) disassembly of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"hex": "data",  (string) hex-encoded bytes of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"sequence": n,  (numeric) the script sequence number`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}, ...`<br />&nbsp;&nbsp;`]`<br />&nbsp;&nbsp;`"vout": [  (array of json objects) the transaction outputs as json objects`<br />&nbsp;&nbsp;&nbsp;&nbsp;`{ (json object)`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"value": n, (numeric) the value in BTC`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"n": n, (numeric) the index of this transaction output`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"scriptPubKey": { (json object) the public key script used to pay coins`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"asm": "asm",  (string) disassembly of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"hex": "data", (string) hex-encoded bytes of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"reqSigs": n,  (numeric) the number of required signatures`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"type": "scripttype" (string) the type of the script (e.g. 'pubkeyhash')`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"addresses": [ (json array of string) the bitcoin addresses associated with this output`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"bitcoinaddress",  (string) the bitcoin address`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`...`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`]`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}, ...`<br />&nbsp;&nbsp;`]`<br />`}`|
+|Returns|`{ (json object)`<br />&nbsp;&nbsp;`"txid": "hash",  (string) the hash of the transaction`<br />&nbsp;&nbsp;`"version": n,  (numeric) the transaction version`<br />&nbsp;&nbsp;`"locktime": n,  (numeric) the transaction lock time`<br />&nbsp;&nbsp;`"vin": [  (array of json objects) the transaction inputs as json objects`<br />&nbsp;&nbsp;<font color="orange">For coinbase transactions:</font><br />&nbsp;&nbsp;&nbsp;&nbsp;`{ (json object)`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"coinbase": "data",  (string) the hex-encoded bytes of the signature script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"sequence": n,  (numeric) the script sequence number`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;<font color="orange">For non-coinbase transactions:</font><br />&nbsp;&nbsp;&nbsp;&nbsp;`{ (json object)`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"txid": "hash", (string) the hash of the origin transaction`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"vout": n, (numeric) the index of the output being redeemed from the origin transaction`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"scriptSig": { (json object) the signature script used to redeem the origin transaction`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"asm": "asm", (string) disassembly of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"hex": "data",  (string) hex-encoded bytes of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"sequence": n,  (numeric) the script sequence number`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}, ...`<br />&nbsp;&nbsp;`]`<br />&nbsp;&nbsp;`"vout": [  (array of json objects) the transaction outputs as json objects`<br />&nbsp;&nbsp;&nbsp;&nbsp;`{ (json object)`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"value": n, (numeric) the value in BTC`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"n": n, (numeric) the index of this transaction output`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"scriptPubKey": { (json object) the public key script used to pay coins`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"asm": "asm",  (string) disassembly of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"hex": "data", (string) hex-encoded bytes of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"reqSigs": n,  (numeric) the number of required signatures`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"type": "scripttype" (string) the type of the script (e.g. 'pubkeyhash')`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"addresses": [ (json array of string) the bitcoin addresses associated with this output`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"bitcoinaddress",  (string) the bitcoin address`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`...`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`]`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}, ...`<br />&nbsp;&nbsp;`]`<br />`}`|
 |Example Return|`{`<br />&nbsp;&nbsp;`"txid": "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b",`<br />&nbsp;&nbsp;`"version": 1,`<br />&nbsp;&nbsp;`"locktime": 0,`<br />&nbsp;&nbsp;`"vin": [`<br />&nbsp;&nbsp;<font color="orange">For coinbase transactions:</font><br />&nbsp;&nbsp;&nbsp;&nbsp;`{ (json object)`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"coinbase": "04ffff001d0104455468652054696d65732030332f4a616e2f32303039204368616e63656c6c6...",`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"sequence": 4294967295,`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;<font color="orange">For non-coinbase transactions:</font><br />&nbsp;&nbsp;&nbsp;&nbsp;`{`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"txid": "60ac4b057247b3d0b9a8173de56b5e1be8c1d1da970511c626ef53706c66be04",`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"vout": 0,`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"scriptSig": {`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"asm": "3046022100cb42f8df44eca83dd0a727988dcde9384953e830b1f8004d57485e2ede1b9c8f0...",`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"hex": "493046022100cb42f8df44eca83dd0a727988dcde9384953e830b1f8004d57485e2ede1b9c8...",`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"sequence": 4294967295,`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;`]`<br />&nbsp;&nbsp;`"vout": [`<br />&nbsp;&nbsp;&nbsp;&nbsp;`{`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"value": 50,`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"n": 0,`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"scriptPubKey": {`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"asm": "04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4ce...",`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"hex": "4104678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4...",`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"reqSigs": 1,`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"type": "pubkey"`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"addresses": [`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`]`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;`]`<br />`}`|
 [Return to Overview](#MethodOverview)<br />
 
@@ -292,6 +293,20 @@ the method name for further details such as parameter and return information.
 |Description|Returns hash of the block in best block chain at the given height.|
 |Returns|string|
 |Example Return|`000000000000000096579458d1c0f1531fcfc58d57b4fce51eb177d8d10e784d`|
+[Return to Overview](#MethodOverview)<br />
+
+***
+<a name="getblockheader"/>
+
+|   |   |
+|---|---|
+|Method|getblockheader|
+|Parameters|1. block hash (string, required) - the hash of the block<br />2. verbose (boolean, optional, default=true) - specifies the block header is returned as a JSON object instead of a hex-encoded string|
+|Description|Returns hex-encoded bytes of the serialized block header.|
+|Returns (verbose=false)|`"data" (string) hex-encoded bytes of the serialized block`|
+|Returns (verbose=true)|`{ (json object)`<br />&nbsp;&nbsp;`"hash": "blockhash", (string) the hash of the block (same as provided)`<br />&nbsp;&nbsp;`"confirmations": n,  (numeric) the number of confirmations`<br />&nbsp;&nbsp;`"height": n, (numeric) the height of the block in the block chain`<br />&nbsp;&nbsp;`"version": n,  (numeric) the block version`<br />&nbsp;&nbsp;`"merkleroot": "hash",  (string) root hash of the merkle tree`<br />&nbsp;&nbsp;`"time": n,  (numeric) the block time in seconds since 1 Jan 1970 GMT`<br />&nbsp;&nbsp;`"nonce": n,  (numeric) the block nonce`<br />&nbsp;&nbsp;`"bits": n,  (numeric) the bits which represent the block difficulty`<br />&nbsp;&nbsp;`"difficulty": n.nn,  (numeric) the proof-of-work difficulty as a multiple of the minimum difficulty`<br />&nbsp;&nbsp;`"previousblockhash": "hash",  (string) the hash of the previous block`<br />&nbsp;&nbsp;`"nextblockhash": "hash",  (string) the hash of the next block (only if there is one)`<br />`}`|
+|Example Return (verbose=false)|`"0200000035ab154183570282ce9afc0b494c9fc6a3cfea05aa8c1add2ecc564900000000`<br />`38ba3d78e4500a5a7570dbe61960398add4410d278b21cd9708e6d9743f374d544fc0552`<br />`27f1001c29c1ea3b"`<br /><font color="orange">**Newlines added for display purposes.  The actual return does not contain newlines.**</font>|
+|Example Return (verbose=true)|`{`<br />&nbsp;&nbsp;`"hash": "00000000009e2958c15ff9290d571bf9459e93b19765c6801ddeccadbb160a1e",`<br />&nbsp;&nbsp;`"confirmations": 392076,`<br />&nbsp;&nbsp;`"height": 100000,`<br />&nbsp;&nbsp;`"version": 2,`<br />&nbsp;&nbsp;`"merkleroot": "d574f343976d8e70d91cb278d21044dd8a396019e6db70755a0a50e4783dba38",`<br />&nbsp;&nbsp;`"time": 1376123972,`<br />&nbsp;&nbsp;`"nonce": 1005240617,`<br />&nbsp;&nbsp;`"bits": "1c00f127",`<br />&nbsp;&nbsp;`"difficulty": 271.75767393,`<br />&nbsp;&nbsp;`"previousblockhash": "000000004956cc2edd1a8caa05eacfa3c69f4c490bfc9ace820257834115ab35",`<br />&nbsp;&nbsp;`"nextblockhash": "0000000000629d100db387f37d0f37c51118f250fb0946310a8c37316cbc4028"`<br />`}`|
 [Return to Overview](#MethodOverview)<br />
 
 ***
@@ -422,7 +437,7 @@ Example Return|`{`<br />&nbsp;&nbsp;`"bytes": 310768,`<br />&nbsp;&nbsp;`"size":
 |Parameters|1. transaction hash (string, required) - the hash of the transaction<br />2. verbose (int, optional, default=0) - specifies the transaction is returned as a JSON object instead of hex-encoded string|
 |Description|Returns information about a transaction given its hash.|
 |Returns (verbose=0)|`"data" (string) hex-encoded bytes of the serialized transaction`|
-|Returns (verbose=1)|`{ (json object)`<br />&nbsp;&nbsp;`"hex": "data",  (string) hex-encoded transaction`<br />&nbsp;&nbsp;`"txid": "hash",  (string) the hash of the transaction`<br />&nbsp;&nbsp;`"version": n,  (numeric) the transaction version`<br />&nbsp;&nbsp;`"locktime": n,  (numeric) the transaction lock time`<br />&nbsp;&nbsp;`"vin": [  (array of json objects) the transaction inputs as json objects`<br />&nbsp;&nbsp;<font color="orange">For coinbase transactions:</font><br />&nbsp;&nbsp;&nbsp;&nbsp;`{ (json object)`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"coinbase": "data",  (string) the hex-dencoded bytes of the signature script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"sequence": n,  (numeric) the script sequence number`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;<font color="orange">For non-coinbase transactions:</font><br />&nbsp;&nbsp;&nbsp;&nbsp;`{ (json object)`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"txid": "hash", (string) the hash of the origin transaction`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"vout": n, (numeric) the index of the output being redeemed from the origin transaction`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"scriptSig": { (json object) the signature script used to redeem the origin transaction`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"asm": "asm", (string) disassembly of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"hex": "data",  (string) hex-encoded bytes of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"sequence": n,  (numeric) the script sequence number`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}, ...`<br />&nbsp;&nbsp;`]`<br />&nbsp;&nbsp;`"vout": [  (array of json objects) the transaction outputs as json objects`<br />&nbsp;&nbsp;&nbsp;&nbsp;`{ (json object)`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"value": n, (numeric) the value in BTC`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"n": n, (numeric) the index of this transaction output`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"scriptPubKey": { (json object) the public key script used to pay coins`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"asm": "asm",  (string) disassembly of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"hex": "data", (string) hex-encoded bytes of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"reqSigs": n,  (numeric) the number of required signatures`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"type": "scripttype" (string) the type of the script (e.g. 'pubkeyhash')`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"addresses": [ (json array of string) the bitcoin addresses associated with this output`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"bitcoinaddress",  (string) the bitcoin address`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`...`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`]`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}, ...`<br />&nbsp;&nbsp;`]`<br />`}`|
+|Returns (verbose=1)|`{ (json object)`<br />&nbsp;&nbsp;`"hex": "data",  (string) hex-encoded transaction`<br />&nbsp;&nbsp;`"txid": "hash",  (string) the hash of the transaction`<br />&nbsp;&nbsp;`"version": n,  (numeric) the transaction version`<br />&nbsp;&nbsp;`"locktime": n,  (numeric) the transaction lock time`<br />&nbsp;&nbsp;`"vin": [  (array of json objects) the transaction inputs as json objects`<br />&nbsp;&nbsp;<font color="orange">For coinbase transactions:</font><br />&nbsp;&nbsp;&nbsp;&nbsp;`{ (json object)`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"coinbase": "data",  (string) the hex-encoded bytes of the signature script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"sequence": n,  (numeric) the script sequence number`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;<font color="orange">For non-coinbase transactions:</font><br />&nbsp;&nbsp;&nbsp;&nbsp;`{ (json object)`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"txid": "hash", (string) the hash of the origin transaction`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"vout": n, (numeric) the index of the output being redeemed from the origin transaction`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"scriptSig": { (json object) the signature script used to redeem the origin transaction`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"asm": "asm", (string) disassembly of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"hex": "data",  (string) hex-encoded bytes of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"sequence": n,  (numeric) the script sequence number`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}, ...`<br />&nbsp;&nbsp;`]`<br />&nbsp;&nbsp;`"vout": [  (array of json objects) the transaction outputs as json objects`<br />&nbsp;&nbsp;&nbsp;&nbsp;`{ (json object)`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"value": n, (numeric) the value in BTC`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"n": n, (numeric) the index of this transaction output`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"scriptPubKey": { (json object) the public key script used to pay coins`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"asm": "asm",  (string) disassembly of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"hex": "data", (string) hex-encoded bytes of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"reqSigs": n,  (numeric) the number of required signatures`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"type": "scripttype" (string) the type of the script (e.g. 'pubkeyhash')`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"addresses": [ (json array of string) the bitcoin addresses associated with this output`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"bitcoinaddress",  (string) the bitcoin address`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`...`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`]`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}, ...`<br />&nbsp;&nbsp;`]`<br />`}`|
 |Example Return (verbose=0)|`"010000000104be666c7053ef26c6110597dad1c1e81b5e6be53d17a8b9d0b34772054bac60000000`<br />`008c493046022100cb42f8df44eca83dd0a727988dcde9384953e830b1f8004d57485e2ede1b9c8f`<br />`022100fbce8d84fcf2839127605818ac6c3e7a1531ebc69277c504599289fb1e9058df0141045a33`<br />`76eeb85e494330b03c1791619d53327441002832f4bd618fd9efa9e644d242d5e1145cb9c2f71965`<br />`656e276633d4ff1a6db5e7153a0a9042745178ebe0f5ffffffff0280841e00000000001976a91406`<br />`f1b6703d3f56427bfcfd372f952d50d04b64bd88ac4dd52700000000001976a9146b63f291c295ee`<br />`abd9aee6be193ab2d019e7ea7088ac00000000`<br /><font color="orange">**Newlines added for display purposes.  The actual return does not contain newlines.**</font>|
 |Example Return (verbose=1)|`{`<br />&nbsp;&nbsp;`"hex": "01000000010000000000000000000000000000000000000000000000000000000000000000f...",`<br />&nbsp;&nbsp;`"txid": "90743aad855880e517270550d2a881627d84db5265142fd1e7fb7add38b08be9",`<br />&nbsp;&nbsp;`"version": 1,`<br />&nbsp;&nbsp;`"locktime": 0,`<br />&nbsp;&nbsp;`"vin": [`<br />&nbsp;&nbsp;<font color="orange">For coinbase transactions:</font><br />&nbsp;&nbsp;&nbsp;&nbsp;`{ (json object)`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"coinbase": "03708203062f503253482f04066d605108f800080100000ea2122f6f7a636f696e4065757374726174756d2f",`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"sequence": 0,`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;<font color="orange">For non-coinbase transactions:</font><br />&nbsp;&nbsp;&nbsp;&nbsp;`{`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"txid": "60ac4b057247b3d0b9a8173de56b5e1be8c1d1da970511c626ef53706c66be04",`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"vout": 0,`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"scriptSig": {`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"asm": "3046022100cb42f8df44eca83dd0a727988dcde9384953e830b1f8004d57485e2ede1b9c8f0...",`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"hex": "493046022100cb42f8df44eca83dd0a727988dcde9384953e830b1f8004d57485e2ede1b9c8...",`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"sequence": 4294967295,`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;`]`<br />&nbsp;&nbsp;`"vout": [`<br />&nbsp;&nbsp;&nbsp;&nbsp;`{`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"value": 25.1394,`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"n": 0,`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"scriptPubKey": {`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"asm": "OP_DUP OP_HASH160 ea132286328cfc819457b9dec386c4b5c84faa5c OP_EQUALVERIFY OP_CHECKSIG",`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"hex": "76a914ea132286328cfc819457b9dec386c4b5c84faa5c88ac",`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"reqSigs": 1,`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"type": "pubkeyhash"`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"addresses": [`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"1NLg3QJMsMQGM5KEUaEu5ADDmKQSLHwmyh",`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`]`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;`]`<br />`}`|
 [Return to Overview](#MethodOverview)<br />
@@ -617,10 +632,10 @@ The following is an overview of the RPC methods which are implemented by btcd, b
 |   |   |
 |---|---|
 |Method|searchrawtransactions|
-|Parameters|1. address (string, required) - bitcoin address <br /> 2. verbose (int, optional, default=true) - specifies the transaction is returned as a JSON object instead of hex-encoded string <br />3. skip (int, optional, default=0) - the number of leading transactions to leave out of the final response <br /> 4. count (int, optional, default=100) - the maximum number of transactions to return|
+|Parameters|1. address (string, required) - bitcoin address <br /> 2. verbose (int, optional, default=true) - specifies the transaction is returned as a JSON object instead of hex-encoded string <br />3. skip (int, optional, default=0) - the number of leading transactions to leave out of the final response <br /> 4. count (int, optional, default=100) - the maximum number of transactions to return <br /> 5. vinextra (int, optional, default=0) - Specify that extra data from previous output will be returned in vin <br /> 6. reverse (boolean, optional, default=false) - Specifies that the transactions should be returned in reverse chronological order|
 |Description|Returns raw data for transactions involving the passed address. Returned transactions are pulled from both the database, and transactions currently in the mempool. Transactions pulled from the mempool will have the `"confirmations"` field set to 0. Usage of this RPC requires the optional `--addrindex` flag to be activated, otherwise all responses will simply return with an error stating the address index has not yet been built up. Similarly, until the address index has caught up with the current best height, all requests will return an error response in order to avoid serving stale data.|
 |Returns (verbose=0)|`[ (json array of strings)` <br/>&nbsp;&nbsp; `"serializedtx", ... hex-encoded bytes of the serialized transaction` <br/>`]` |
-|Returns (verbose=1)|`[ (array of json objects)` <br/> &nbsp;&nbsp; `{ (json object)`<br />&nbsp;&nbsp;`"hex": "data",  (string) hex-encoded transaction`<br />&nbsp;&nbsp;`"txid": "hash",  (string) the hash of the transaction`<br />&nbsp;&nbsp;`"version": n,  (numeric) the transaction version`<br />&nbsp;&nbsp;`"locktime": n,  (numeric) the transaction lock time`<br />&nbsp;&nbsp;`"vin": [  (array of json objects) the transaction inputs as json objects`<br />&nbsp;&nbsp;<font color="orange">For coinbase transactions:</font><br />&nbsp;&nbsp;&nbsp;&nbsp;`{ (json object)`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"coinbase": "data",  (string) the hex-dencoded bytes of the signature script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"sequence": n,  (numeric) the script sequence number`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;<font color="orange">For non-coinbase transactions:</font><br />&nbsp;&nbsp;&nbsp;&nbsp;`{ (json object)`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"txid": "hash", (string) the hash of the origin transaction`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"vout": n, (numeric) the index of the output being redeemed from the origin transaction`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"scriptSig": { (json object) the signature script used to redeem the origin transaction`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"asm": "asm", (string) disassembly of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"hex": "data",  (string) hex-encoded bytes of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"sequence": n,  (numeric) the script sequence number`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}, ...`<br />&nbsp;&nbsp;`]`<br />&nbsp;&nbsp;`"vout": [  (array of json objects) the transaction outputs as json objects`<br />&nbsp;&nbsp;&nbsp;&nbsp;`{ (json object)`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"value": n, (numeric) the value in BTC`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"n": n, (numeric) the index of this transaction output`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"scriptPubKey": { (json object) the public key script used to pay coins`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"asm": "asm",  (string) disassembly of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"hex": "data", (string) hex-encoded bytes of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"reqSigs": n,  (numeric) the number of required signatures`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"type": "scripttype" (string) the type of the script (e.g. 'pubkeyhash')`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"addresses": [ (json array of string) the bitcoin addresses associated with this output`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"address",  (string) the bitcoin address`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`...`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`]`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}, ...`<br /> &nbsp;&nbsp;&nbsp;`]`<br />&nbsp;&nbsp; `"blockhash":"hash" Hash of the block the transaction is part of.` <br /> &nbsp;&nbsp; `"confirmations":n,  Number of numeric confirmations of block.` <br /> &nbsp;&nbsp;&nbsp;`"time":t, Transaction time in seconds since the epoch.` <br /> &nbsp;&nbsp;&nbsp;`"blocktime":t, Block time in seconds since the epoch.`<br />`},...`<br/> `]`|
+|Returns (verbose=1)|`[ (array of json objects)` <br/> &nbsp;&nbsp; `{ (json object)`<br />&nbsp;&nbsp;`"hex": "data",  (string) hex-encoded transaction`<br />&nbsp;&nbsp;`"txid": "hash",  (string) the hash of the transaction`<br />&nbsp;&nbsp;`"version": n,  (numeric) the transaction version`<br />&nbsp;&nbsp;`"locktime": n,  (numeric) the transaction lock time`<br />&nbsp;&nbsp;`"vin": [  (array of json objects) the transaction inputs as json objects`<br />&nbsp;&nbsp;<font color="orange">For coinbase transactions:</font><br />&nbsp;&nbsp;&nbsp;&nbsp;`{ (json object)`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"coinbase": "data",  (string) the hex-encoded bytes of the signature script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"sequence": n,  (numeric) the script sequence number`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;<font color="orange">For non-coinbase transactions:</font><br />&nbsp;&nbsp;&nbsp;&nbsp;`{ (json object)`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"txid": "hash", (string) the hash of the origin transaction`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"vout": n, (numeric) the index of the output being redeemed from the origin transaction`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"scriptSig": { (json object) the signature script used to redeem the origin transaction`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"asm": "asm", (string) disassembly of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"hex": "data",  (string) hex-encoded bytes of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"prevOut": { (json object) Data from the origin transaction output with index vout.`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"addresses": ["value",...], (array of string) previous output addresses`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"value": n.nnn,             (numeric)         previous output value`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"sequence": n,  (numeric) the script sequence number`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}, ...`<br />&nbsp;&nbsp;`]`<br />&nbsp;&nbsp;`"vout": [  (array of json objects) the transaction outputs as json objects`<br />&nbsp;&nbsp;&nbsp;&nbsp;`{ (json object)`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"value": n, (numeric) the value in BTC`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"n": n, (numeric) the index of this transaction output`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"scriptPubKey": { (json object) the public key script used to pay coins`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"asm": "asm",  (string) disassembly of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"hex": "data", (string) hex-encoded bytes of the script`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"reqSigs": n,  (numeric) the number of required signatures`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"type": "scripttype" (string) the type of the script (e.g. 'pubkeyhash')`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"addresses": [ (json array of string) the bitcoin addresses associated with this output`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`"address",  (string) the bitcoin address`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`...`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`]`<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`}`<br />&nbsp;&nbsp;&nbsp;&nbsp;`}, ...`<br /> &nbsp;&nbsp;&nbsp;`]`<br />&nbsp;&nbsp; `"blockhash":"hash" Hash of the block the transaction is part of.` <br /> &nbsp;&nbsp; `"confirmations":n,  Number of numeric confirmations of block.` <br /> &nbsp;&nbsp;&nbsp;`"time":t, Transaction time in seconds since the epoch.` <br /> &nbsp;&nbsp;&nbsp;`"blocktime":t, Block time in seconds since the epoch.`<br />`},...`<br/> `]`|
 [Return to Overview](#ExtMethodOverview)<br />
 
 ***
@@ -670,6 +685,7 @@ user.  Click the method name for further details such as parameter and return in
 |8|[rescan](#rescan)|Rescan block chain for transactions to addresses and spent transaction outpoints.|[recvtx](#recvtx), [redeemingtx](#redeemingtx), [rescanprogress](#rescanprogress), and [rescanfinished](#rescanfinished) |
 |9|[notifynewtransactions](#notifynewtransactions)|Send notifications for all new transactions as they are accepted into the mempool.|[txaccepted](#txaccepted) or [txacceptedverbose](#txacceptedverbose)|
 |10|[stopnotifynewtransactions](#stopnotifynewtransactions)|Stop sending either a txaccepted or a txacceptedverbose notification when a new transaction is accepted into the mempool.|None|
+|11|[session](#session)|Return details regarding a websocket client's current connection.|None|
 
 <a name="WSExtMethodDetails" />
 **7.2 Method Details**<br />
@@ -682,7 +698,7 @@ user.  Click the method name for further details such as parameter and return in
 |Parameters|1. username (string, required)<br />2. passphrase (string, required)|
 |Description|Authenticate the connection against the username and password configured for the RPC server.<br />  Invoking any other method before authenticating with this command will close the connection.<br /><font color="orange">NOTE: This is only required if an HTTP Authorization header is not being used.</font>|
 |Returns|Success: Nothing<br />Failure: Nothing (websocket disconnected)|
-[Return to Overview](#ExtensionRequestOverview)<br />
+[Return to Overview](#WSExtMethodOverview)<br />
 
 ***
 
@@ -695,7 +711,7 @@ user.  Click the method name for further details such as parameter and return in
 |Parameters|None|
 |Description|Request notifications for whenever a block is connected or disconnected from the main (best) chain.<br />NOTE: If a client subscribes to both block and transaction (recvtx and redeemingtx) notifications, the blockconnected notification will be sent after all transaction notifications have been sent.  This allows clients to know when all relevant transactions for a block have been received.|
 |Returns|Nothing|
-[Return to Overview](#ExtensionRequestOverview)<br />
+[Return to Overview](#WSExtMethodOverview)<br />
 
 ***
 <a name="stopnotifyblocks"/>
@@ -707,7 +723,7 @@ user.  Click the method name for further details such as parameter and return in
 |Parameters|None|
 |Description|Cancel sending notifications for whenever a block is connected or disconnected from the main (best) chain.|
 |Returns|Nothing|
-[Return to Overview](#ExtensionRequestOverview)<br />
+[Return to Overview](#WSExtMethodOverview)<br />
 
 ***
 
@@ -720,7 +736,7 @@ user.  Click the method name for further details such as parameter and return in
 |Parameters|1. Addresses (JSON array, required)<br />&nbsp;`[ (json array of strings)`<br />&nbsp;&nbsp;`"bitcoinaddress", (string) the bitcoin address`<br />&nbsp;&nbsp;`...`<br />&nbsp;`]`|
 |Description|Send a recvtx notification when a transaction added to mempool or appears in a newly-attached block contains a txout pkScript sending to any of the passed addresses.  Matching outpoints are automatically registered for redeemingtx notifications.|
 |Returns|Nothing|
-[Return to Overview](#ExtensionRequestOverview)<br />
+[Return to Overview](#WSExtMethodOverview)<br />
 
 ***
 
@@ -733,7 +749,7 @@ user.  Click the method name for further details such as parameter and return in
 |Parameters|1. Addresses (JSON array, required)<br />&nbsp;`[ (json array of strings)`<br />&nbsp;&nbsp;`"bitcoinaddress", (string) the bitcoin address`<br />&nbsp;&nbsp;`...`<br />&nbsp;`]`|
 |Description|Cancel registered receive notifications for each passed address.|
 |Returns|Nothing|
-[Return to Overview](#ExtensionRequestOverview)<br />
+[Return to Overview](#WSExtMethodOverview)<br />
 
 ***
 
@@ -746,7 +762,7 @@ user.  Click the method name for further details such as parameter and return in
 |Parameters|1. Outpoints (JSON array, required)<br />&nbsp;`[ (JSON array)`<br />&nbsp;&nbsp;`{ (JSON object)`<br />&nbsp;&nbsp;&nbsp;`"hash":"data", (string) the hex-encoded bytes of the outpoint hash`<br />&nbsp;&nbsp;&nbsp;`"index":n (numeric) the txout index of the outpoint`<br />&nbsp;&nbsp;`},`<br />&nbsp;&nbsp;`...`<br />&nbsp;`]`|
 |Description|Send a redeemingtx notification when a transaction spending an outpoint appears in mempool (if relayed to this btcd instance) and when such a transaction first appears in a newly-attached block.|
 |Returns|Nothing|
-[Return to Overview](#ExtensionRequestOverview)<br />
+[Return to Overview](#WSExtMethodOverview)<br />
 
 ***
 
@@ -759,7 +775,7 @@ user.  Click the method name for further details such as parameter and return in
 |Parameters|1. Outpoints (JSON array, required)<br />&nbsp;`[ (JSON array)`<br />&nbsp;&nbsp;`{ (JSON object)`<br />&nbsp;&nbsp;&nbsp;`"hash":"data", (string) the hex-encoded bytes of the outpoint hash`<br />&nbsp;&nbsp;&nbsp;`"index":n (numeric) the txout index of the outpoint`<br />&nbsp;&nbsp;`},`<br />&nbsp;&nbsp;`...`<br />&nbsp;`]`|
 |Description|Cancel registered spending notifications for each passed outpoint.|
 |Returns|Nothing|
-[Return to Overview](#ExtensionRequestOverview)<br />
+[Return to Overview](#WSExtMethodOverview)<br />
 
 ***
 
@@ -772,7 +788,7 @@ user.  Click the method name for further details such as parameter and return in
 |Parameters|1. BeginBlock (string, required) block hash to begin rescanning from<br />2. Addresses (JSON array, required)<br />&nbsp;`[ (json array of strings)`<br />&nbsp;&nbsp;`"bitcoinaddress", (string) the bitcoin address`<br />&nbsp;&nbsp;`...` <br />&nbsp;`]`<br />3. Outpoints (JSON array, required)<br />&nbsp;`[ (JSON array)`<br />&nbsp;&nbsp;`{ (JSON object)`<br />&nbsp;&nbsp;&nbsp;`"hash":"data", (string) the hex-encoded bytes of the outpoint hash`<br />&nbsp;&nbsp;&nbsp;`"index":n (numeric) the txout index of the outpoint`<br />&nbsp;&nbsp;`},`<br />&nbsp;&nbsp;`...`<br />&nbsp;`]`<br />4. EndBlock (string, optional) hash of final block to rescan|
 |Description|Rescan block chain for transactions to addresses, starting at block BeginBlock and ending at EndBlock.  The current known UTXO set for all passed addresses at height BeginBlock should included in the Outpoints argument.  If EndBlock is omitted, the rescan continues through the best block in the main chain.  Additionally, if no EndBlock is provided, the client is automatically registered for transaction notifications for all rescanned addresses and the final UTXO set.  Rescan results are sent as recvtx and redeemingtx notifications.  This call returns once the rescan completes.|
 |Returns|Nothing|
-[Return to Overview](#ExtensionRequestOverview)<br />
+[Return to Overview](#WSExtMethodOverview)<br />
 
 ***
 
@@ -785,7 +801,7 @@ user.  Click the method name for further details such as parameter and return in
 |Parameters|1. verbose (boolean, optional, default=false) - specifies which type of notification to receive.  If verbose is true, then the caller receives [txacceptedverbose](#txacceptedverbose), otherwise the caller receives [txaccepted](#txaccepted)|
 |Description|Send either a [txaccepted](#txaccepted) or a [txacceptedverbose](#txacceptedverbose) notification when a new transaction is accepted into the mempool.|
 |Returns|Nothing|
-[Return to Overview](#ExtensionRequestOverview)<br />
+[Return to Overview](#WSExtMethodOverview)<br />
 
 ***
 
@@ -798,7 +814,21 @@ user.  Click the method name for further details such as parameter and return in
 |Parameters|None|
 |Description|Stop sending either a [txaccepted](#txaccepted) or a [txacceptedverbose](#txacceptedverbose) notification when a new transaction is accepted into the mempool.|
 |Returns|Nothing|
-[Return to Overview](#ExtensionRequestOverview)<br />
+[Return to Overview](#WSExtMethodOverview)<br />
+
+***
+
+<a name="session"/>
+
+|   |   |
+|---|---|
+|Method|session|
+|Notifications|None|
+|Parameters|None|
+|Description|Return a JSON object with details regarding a websocket client's current connection to the RPC server.  This currently only includes the session ID, a random unsigned 64-bit integer that is created for each newly connected client.  Session IDs may be used to verify that the current connection was not lost and subsequently reestablished.|
+|Returns|`{ (json object)`<br />&nbsp;&nbsp;`"sessionid": n  (numeric) the session ID`<br />`}`|
+|Example Return|`{`<br />&nbsp;&nbsp;`"sessionid": 67089679842`<br />`}`|
+[Return to Overview](#WSExtMethodOverview)<br />
 
 
 <a name="Notifications" />
@@ -961,7 +991,7 @@ package main
 
 import (
 	"github.com/btcsuite/btcrpcclient"
-	"github.com/ppcsuite/btcutil"
+	"github.com/btcsuite/btcutil"
 	"io/ioutil"
 	"log"
 	"path/filepath"
@@ -1021,8 +1051,8 @@ package main
 
 import (
 	"github.com/btcsuite/btcrpcclient"
-	"github.com/ppcsuite/btcutil"
-	"github.com/ppcsuite/ppcd/wire"
+	"github.com/btcsuite/btcutil"
+	"github.com/btcsuite/btcd/wire"
 	"io/ioutil"
 	"log"
 	"path/filepath"
@@ -1111,8 +1141,8 @@ package main
 
 import (
 	"github.com/btcsuite/btcrpcclient"
-	"github.com/ppcsuite/btcutil"
-	"github.com/ppcsuite/ppcd/wire"
+	"github.com/btcsuite/btcutil"
+	"github.com/btcsuite/btcd/wire"
 	"io/ioutil"
 	"log"
 	"path/filepath"

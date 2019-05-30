@@ -23,13 +23,6 @@ const (
 	// allowed for a block.  It is a fraction of the max block payload size.
 	MaxSigOpsPerBlock = wire.MaxBlockPayload / 50
 
-	// lockTimeThreshold is the number below which a lock time is
-	// interpreted to be a block number.  Since an average of one block
-	// is generated per 10 minutes, this allows blocks for about 9,512
-	// years.  However, if the field is interpreted as a timestamp, given
-	// the lock time is a uint32, the max is sometime around 2106.
-	lockTimeThreshold uint32 = 5e8 // Tue Nov 5 00:53:20 1985 UTC
-
 	// MaxTimeOffsetSeconds is the maximum number of seconds a block time
 	// is allowed to be ahead of the current time.  This is currently 2
 	// hours.
@@ -55,6 +48,14 @@ const (
 )
 
 var (
+<<<<<<< HEAD
+=======
+	// coinbaseMaturity is the internal variable used for validating the
+	// spending of coinbase outputs.  A variable rather than the exported
+	// constant is used because the tests need the ability to modify it.
+	coinbaseMaturity = int32(CoinbaseMaturity)
+
+>>>>>>> BTCD_0_12_0_BETA
 	// zeroHash is the zero value for a wire.ShaHash and is defined as
 	// a package level variable to avoid the need to create a new instance
 	// every time a check is needed.
@@ -126,7 +127,7 @@ func IsCoinBase(tx *btcutil.Tx) bool {
 }
 
 // IsFinalizedTransaction determines whether or not a transaction is finalized.
-func IsFinalizedTransaction(tx *btcutil.Tx, blockHeight int64, blockTime time.Time) bool {
+func IsFinalizedTransaction(tx *btcutil.Tx, blockHeight int32, blockTime time.Time) bool {
 	msgTx := tx.MsgTx()
 
 	// Lock time of zero means the transaction is finalized.
@@ -137,11 +138,11 @@ func IsFinalizedTransaction(tx *btcutil.Tx, blockHeight int64, blockTime time.Ti
 
 	// The lock time field of a transaction is either a block height at
 	// which the transaction is finalized or a timestamp depending on if the
-	// value is before the lockTimeThreshold.  When it is under the
+	// value is before the txscript.LockTimeThreshold.  When it is under the
 	// threshold it is a block height.
 	blockTimeOrHeight := int64(0)
-	if lockTime < lockTimeThreshold {
-		blockTimeOrHeight = blockHeight
+	if lockTime < txscript.LockTimeThreshold {
+		blockTimeOrHeight = int64(blockHeight)
 	} else {
 		blockTimeOrHeight = blockTime.Unix()
 	}
@@ -185,13 +186,13 @@ func isBIP0030Node(node *blockNode) bool {
 //
 // At the target block generation rate for the main network, this is
 // approximately every 4 years.
-func CalcBlockSubsidy(height int64, chainParams *chaincfg.Params) int64 {
+func CalcBlockSubsidy(height int32, chainParams *chaincfg.Params) int64 {
 	if chainParams.SubsidyHalvingInterval == 0 {
 		return baseSubsidy
 	}
 
 	// Equivalent to: baseSubsidy / 2^(height/subsidyHalvingInterval)
-	return baseSubsidy >> uint(height/int64(chainParams.SubsidyHalvingInterval))
+	return baseSubsidy >> uint(height/chainParams.SubsidyHalvingInterval)
 }
 
 // CheckTransactionSanity performs some preliminary checks on a transaction to
@@ -241,13 +242,14 @@ func CheckTransactionSanity(tx *btcutil.Tx) error {
 			return ruleError(ErrBadTxOutValue, str)
 		}
 
-		// TODO(davec): No need to check < 0 here as satoshi is
-		// guaranteed to be positive per the above check.  Also need
-		// to add overflow checks.
+		// Two's complement int64 overflow guarantees that any overflow
+		// is detected and reported.  This is impossible for Bitcoin, but
+		// perhaps possible if an alt increases the total money supply.
 		totalSatoshi += satoshi
 		if totalSatoshi < 0 {
 			str := fmt.Sprintf("total value of all transaction "+
-				"outputs has negative value of %v", totalSatoshi)
+				"outputs exceeds max allowed value of %v",
+				btcutil.MaxSatoshi)
 			return ruleError(ErrBadTxOutValue, str)
 		}
 		if totalSatoshi > btcutil.MaxSatoshi {
@@ -654,7 +656,20 @@ func (b *BlockChain) checkBlockHeaderContext(header *wire.BlockHeader, prevNode 
 	}
 
 	if !fastAdd {
+<<<<<<< HEAD
 		/* ppc:
+=======
+		// Reject version 3 blocks once a majority of the network has
+		// upgraded.  This is part of BIP0065.
+		if header.Version < 4 && b.isMajorityVersion(4, prevNode,
+			b.chainParams.BlockRejectNumRequired) {
+
+			str := "new blocks with version %d are no longer valid"
+			str = fmt.Sprintf(str, header.Version)
+			return ruleError(ErrBlockVersionTooOld, str)
+		}
+
+>>>>>>> BTCD_0_12_0_BETA
 		// Reject version 2 blocks once a majority of the network has
 		// upgraded.  This is part of BIP0066.
 		if header.Version < 3 && b.isMajorityVersion(3, prevNode,
@@ -758,7 +773,7 @@ func (b *BlockChain) checkBlockContext(block *btcutil.Block, prevNode *blockNode
 // ExtractCoinbaseHeight attempts to extract the height of the block from the
 // scriptSig of a coinbase transaction.  Coinbase heights are only present in
 // blocks of version 2 or later.  This was added as part of BIP0034.
-func ExtractCoinbaseHeight(coinbaseTx *btcutil.Tx) (int64, error) {
+func ExtractCoinbaseHeight(coinbaseTx *btcutil.Tx) (int32, error) {
 	sigScript := coinbaseTx.MsgTx().TxIn[0].SignatureScript
 	if len(sigScript) < 1 {
 		str := "the coinbase signature script for blocks of " +
@@ -781,12 +796,12 @@ func ExtractCoinbaseHeight(coinbaseTx *btcutil.Tx) (int64, error) {
 	copy(serializedHeightBytes, sigScript[1:serializedLen+1])
 	serializedHeight := binary.LittleEndian.Uint64(serializedHeightBytes)
 
-	return int64(serializedHeight), nil
+	return int32(serializedHeight), nil
 }
 
 // checkSerializedHeight checks if the signature script in the passed
 // transaction starts with the serialized block height of wantHeight.
-func checkSerializedHeight(coinbaseTx *btcutil.Tx, wantHeight int64) error {
+func checkSerializedHeight(coinbaseTx *btcutil.Tx, wantHeight int32) error {
 	serializedHeight, err := ExtractCoinbaseHeight(coinbaseTx)
 	if err != nil {
 		return err
@@ -869,11 +884,15 @@ func (b *BlockChain) checkBIP0030(node *blockNode, block *btcutil.Block) error {
 // amount, and verifying the signatures to prove the spender was the owner of
 // the bitcoins and therefore allowed to spend them.  As it checks the inputs,
 // it also calculates the total fees for the transaction and returns that value.
+<<<<<<< HEAD
 func CheckTransactionInputs(tx *btcutil.Tx, txHeight int64, txStore TxStore,
 	blockChain *BlockChain) (int64, error) {
 
 	defer timeTrack(now(), fmt.Sprintf("CheckTransactionInputs(%v)", slice(tx.Sha())[0]))
 
+=======
+func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, txStore TxStore) (int64, error) {
+>>>>>>> BTCD_0_12_0_BETA
 	// Coinbase transactions have no inputs.
 	if IsCoinBase(tx) {
 		return 0, nil
@@ -1183,12 +1202,21 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block) er
 		scriptFlags |= txscript.ScriptVerifyDERSignatures
 	}*/
 
+	// Enforce CHECKLOCKTIMEVERIFY for block versions 4+ once the majority
+	// of the network has upgraded to the enforcement threshold.  This is
+	// part of BIP0065.
+	if blockHeader.Version >= 4 && b.isMajorityVersion(4, prevNode,
+		b.chainParams.BlockEnforceNumRequired) {
+
+		scriptFlags |= txscript.ScriptVerifyCheckLockTimeVerify
+	}
+
 	// Now that the inexpensive checks are done and have passed, verify the
 	// transactions are actually allowed to spend the coins by running the
 	// expensive ECDSA signature check scripts.  Doing this last helps
 	// prevent CPU exhaustion attacks.
 	if runScripts {
-		err := checkBlockScripts(block, txInputStore, scriptFlags)
+		err := checkBlockScripts(block, txInputStore, scriptFlags, b.sigCache)
 		if err != nil {
 			return err
 		}

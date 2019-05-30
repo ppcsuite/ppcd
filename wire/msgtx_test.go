@@ -334,9 +334,7 @@ func TestTxWireErrors(t *testing.T) {
 		// Force error in number of transaction inputs.
 		{multiTx, multiTxEncoded, pver, 4 + 4, io.ErrShortWrite, io.EOF},
 		// Force error in transaction input previous block hash.
-		{multiTx, multiTxEncoded, pver, 5 + 4, io.ErrShortWrite, io.EOF},
-		// Force error in transaction input previous block hash.
-		{multiTx, multiTxEncoded, pver, 5 + 4, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, pver, 5, io.ErrShortWrite, io.EOF},
 		// Force error in transaction input previous block output index.
 		{multiTx, multiTxEncoded, pver, 37 + 4, io.ErrShortWrite, io.EOF},
 		// Force error in transaction input signature script length.
@@ -354,7 +352,7 @@ func TestTxWireErrors(t *testing.T) {
 		// Force error in transaction output pk script.
 		{multiTx, multiTxEncoded, pver, 63 + 4, io.ErrShortWrite, io.EOF},
 		// Force error in transaction output lock time.
-		{multiTx, multiTxEncoded, pver, 130 + 4, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, pver, 206, io.ErrShortWrite, io.EOF},
 	}
 
 	t.Logf("Running %d tests", len(tests))
@@ -483,9 +481,7 @@ func TestTxSerializeErrors(t *testing.T) {
 		// Force error in number of transaction inputs.
 		{multiTx, multiTxEncoded, 4 + 4, io.ErrShortWrite, io.EOF},
 		// Force error in transaction input previous block hash.
-		{multiTx, multiTxEncoded, 5 + 4, io.ErrShortWrite, io.EOF},
-		// Force error in transaction input previous block hash.
-		{multiTx, multiTxEncoded, 5 + 4, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, 5, io.ErrShortWrite, io.EOF},
 		// Force error in transaction input previous block output index.
 		{multiTx, multiTxEncoded, 37 + 4, io.ErrShortWrite, io.EOF},
 		// Force error in transaction input signature script length.
@@ -503,7 +499,7 @@ func TestTxSerializeErrors(t *testing.T) {
 		// Force error in transaction output pk script.
 		{multiTx, multiTxEncoded, 63 + 4, io.ErrShortWrite, io.EOF},
 		// Force error in transaction output lock time.
-		{multiTx, multiTxEncoded, 130 + 4, io.ErrShortWrite, io.EOF},
+		{multiTx, multiTxEncoded, 206, io.ErrShortWrite, io.EOF},
 	}
 
 	t.Logf("Running %d tests", len(tests))

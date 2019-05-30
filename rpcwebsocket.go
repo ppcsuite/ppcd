@@ -54,6 +54,7 @@ var wsHandlersBeforeInit = map[string]wsCommandHandler{
 	"notifynewtransactions":     handleNotifyNewTransactions,
 	"notifyreceived":            handleNotifyReceived,
 	"notifyspent":               handleNotifySpent,
+	"session":                   handleSession,
 	"stopnotifyblocks":          handleStopNotifyBlocks,
 	"stopnotifynewtransactions": handleStopNotifyNewTransactions,
 	"stopnotifyspent":           handleStopNotifySpent,
@@ -94,7 +95,12 @@ func (s *rpcServer) WebsocketHandler(conn *websocket.Conn, remoteAddr string,
 	// Create a new websocket client to handle the new websocket connection
 	// and wait for it to shutdown.  Once it has shutdown (and hence
 	// disconnected), remove it and any notifications it registered for.
-	client := newWebsocketClient(s, conn, remoteAddr, authenticated, isAdmin)
+	client, err := newWebsocketClient(s, conn, remoteAddr, authenticated, isAdmin)
+	if err != nil {
+		rpcsLog.Errorf("Failed to serve client %s: %v", remoteAddr, err)
+		conn.Close()
+		return
+	}
 	s.ntfnMgr.AddClient(client)
 	client.Start()
 	client.WaitForShutdown()
@@ -487,8 +493,8 @@ func (m *wsNotificationManager) notifyForNewTx(clients map[chan struct{}]*wsClie
 			}
 
 			net := m.server.server.chainParams
-			rawTx, err := createTxRawResult(net, txShaStr, mtx, nil,
-				0, nil)
+			rawTx, err := createTxRawResult(net, mtx, txShaStr, nil,
+				"", 0, 0)
 			if err != nil {
 				return
 			}
@@ -870,6 +876,11 @@ type wsClient struct {
 	// isAdmin specifies whether a client may change the state of the server;
 	// false means its access is only to the limited set of RPC calls.
 	isAdmin bool
+
+	// sessionID is a random ID generated for each client when connected.
+	// These IDs may be queried by a client using the session RPC.  A change
+	// to the session ID indicates that the client reconnected.
+	sessionID uint64
 
 	// verboseTxUpdates specifies whether a client has requested verbose
 	// information about all new transactions.
@@ -1385,13 +1396,19 @@ func (c *wsClient) WaitForShutdown() {
 // incoming and outgoing messages in separate goroutines complete with queueing
 // and asynchrous handling for long-running operations.
 func newWebsocketClient(server *rpcServer, conn *websocket.Conn,
-	remoteAddr string, authenticated bool, isAdmin bool) *wsClient {
+	remoteAddr string, authenticated bool, isAdmin bool) (*wsClient, error) {
 
-	return &wsClient{
+	sessionID, err := wire.RandomUint64()
+	if err != nil {
+		return nil, err
+	}
+
+	client := &wsClient{
 		conn:          conn,
 		addr:          remoteAddr,
 		authenticated: authenticated,
 		isAdmin:       isAdmin,
+		sessionID:     sessionID,
 		server:        server,
 		addrRequests:  make(map[string]struct{}),
 		spentRequests: make(map[wire.OutPoint]struct{}),
@@ -1400,6 +1417,7 @@ func newWebsocketClient(server *rpcServer, conn *websocket.Conn,
 		sendChan:      make(chan wsResponse, websocketSendBufferSize),
 		quit:          make(chan struct{}),
 	}
+	return client, nil
 }
 
 // handleWebsocketHelp implements the help command for websocket connections.
@@ -1454,6 +1472,12 @@ func handleWebsocketHelp(wsc *wsClient, icmd interface{}) (interface{}, error) {
 func handleNotifyBlocks(wsc *wsClient, icmd interface{}) (interface{}, error) {
 	wsc.server.ntfnMgr.RegisterBlockUpdates(wsc)
 	return nil, nil
+}
+
+// handleSession implements the session command extension for websocket
+// connections.
+func handleSession(wsc *wsClient, icmd interface{}) (interface{}, error) {
+	return &btcjson.SessionResult{SessionID: wsc.sessionID}, nil
 }
 
 // handleStopNotifyBlocks implements the stopnotifyblocks command extension for
@@ -1598,8 +1622,8 @@ type rescanKeys struct {
 	fallbacks           map[string]struct{}
 	pubKeyHashes        map[[ripemd160.Size]byte]struct{}
 	scriptHashes        map[[ripemd160.Size]byte]struct{}
-	compressedPubkeys   map[[33]byte]struct{}
-	uncompressedPubkeys map[[65]byte]struct{}
+	compressedPubKeys   map[[33]byte]struct{}
+	uncompressedPubKeys map[[65]byte]struct{}
 	unspent             map[wire.OutPoint]struct{}
 }
 
@@ -1686,14 +1710,14 @@ func rescanBlock(wsc *wsClient, lookups *rescanKeys, blk *btcutil.Block) {
 					case 33: // Compressed
 						var key [33]byte
 						copy(key[:], sa)
-						if _, ok := lookups.compressedPubkeys[key]; ok {
+						if _, ok := lookups.compressedPubKeys[key]; ok {
 							found = true
 						}
 
 					case 65: // Uncompressed
 						var key [65]byte
 						copy(key[:], sa)
-						if _, ok := lookups.uncompressedPubkeys[key]; ok {
+						if _, ok := lookups.uncompressedPubKeys[key]; ok {
 							found = true
 						}
 
@@ -1761,7 +1785,7 @@ func rescanBlock(wsc *wsClient, lookups *rescanKeys, blk *btcutil.Block) {
 // verifies that the new range of blocks is on the same fork as a previous
 // range of blocks.  If this condition does not hold true, the JSON-RPC error
 // for an unrecoverable reorganize is returned.
-func recoverFromReorg(db database.Db, minBlock, maxBlock int64,
+func recoverFromReorg(db database.Db, minBlock, maxBlock int32,
 	lastBlock *wire.ShaHash) ([]wire.ShaHash, error) {
 
 	hashList, err := db.FetchHeightRange(minBlock, maxBlock)
@@ -1841,8 +1865,8 @@ func handleRescan(wsc *wsClient, icmd interface{}) (interface{}, error) {
 		fallbacks:           map[string]struct{}{},
 		pubKeyHashes:        map[[ripemd160.Size]byte]struct{}{},
 		scriptHashes:        map[[ripemd160.Size]byte]struct{}{},
-		compressedPubkeys:   map[[33]byte]struct{}{},
-		uncompressedPubkeys: map[[65]byte]struct{}{},
+		compressedPubKeys:   map[[33]byte]struct{}{},
+		uncompressedPubKeys: map[[65]byte]struct{}{},
 		unspent:             map[wire.OutPoint]struct{}{},
 	}
 	var compressedPubkey [33]byte
@@ -1869,11 +1893,11 @@ func handleRescan(wsc *wsClient, icmd interface{}) (interface{}, error) {
 			switch len(pubkeyBytes) {
 			case 33: // Compressed
 				copy(compressedPubkey[:], pubkeyBytes)
-				lookups.compressedPubkeys[compressedPubkey] = struct{}{}
+				lookups.compressedPubKeys[compressedPubkey] = struct{}{}
 
 			case 65: // Uncompressed
 				copy(uncompressedPubkey[:], pubkeyBytes)
-				lookups.uncompressedPubkeys[uncompressedPubkey] = struct{}{}
+				lookups.uncompressedPubKeys[uncompressedPubkey] = struct{}{}
 
 			default:
 				jsonErr := btcjson.RPCError{
@@ -2025,7 +2049,7 @@ fetchRange:
 				// A goto is used to branch executation back to
 				// before the range was evaluated, as it must be
 				// reevaluated for the new hashList.
-				minBlock += int64(i)
+				minBlock += int32(i)
 				hashList, err = recoverFromReorg(db, minBlock,
 					maxBlock, lastBlockHash)
 				if err != nil {
@@ -2085,7 +2109,7 @@ fetchRange:
 			}
 		}
 
-		minBlock += int64(len(hashList))
+		minBlock += int32(len(hashList))
 	}
 
 	// Notify websocket client of the finished rescan.  Due to how btcd

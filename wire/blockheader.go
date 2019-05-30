@@ -11,8 +11,9 @@ import (
 )
 
 // BlockVersion is the current latest supported block version.
-const BlockVersion = 2
+const BlockVersion = 4
 
+// MaxBlockHeaderPayload is the maximum number of bytes a block header can be.
 // Version 4 bytes + Timestamp 4 bytes + Bits 4 bytes + Nonce 4 bytes +
 // PrevBlock and MerkleRoot hashes.
 const MaxBlockHeaderPayload = 16 + (HashSize * 2)
@@ -54,6 +55,22 @@ func (h *BlockHeader) BlockSha() ShaHash {
 	_ = writeBlockHeader(&buf, 0, h)
 
 	return DoubleSha256SH(buf.Bytes())
+}
+
+// BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
+// This is part of the Message interface implementation.
+// See Deserialize for decoding block headers stored to disk, such as in a
+// database, as opposed to decoding block headers from the wire.
+func (h *BlockHeader) BtcDecode(r io.Reader, pver uint32) error {
+	return readBlockHeader(r, pver, h)
+}
+
+// BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
+// This is part of the Message interface implementation.
+// See Serialize for encoding block headers to be stored to disk, such as in a
+// database, as opposed to encoding block headers for the wire.
+func (h *BlockHeader) BtcEncode(w io.Writer, pver uint32) error {
+	return writeBlockHeader(w, pver, h)
 }
 
 // Deserialize decodes a block header from r into the receiver using a format

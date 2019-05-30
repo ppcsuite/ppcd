@@ -10,6 +10,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/btcsuite/btcd/addrmgr"
+	"github.com/btcsuite/btcd/blockchain"
+	"github.com/btcsuite/btcd/database"
+	"github.com/btcsuite/btcd/peer"
+	"github.com/btcsuite/btcd/txscript"
+	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btclog"
 	"github.com/btcsuite/seelog"
 	"github.com/ppcsuite/ppcd/addrmgr"
@@ -20,13 +26,6 @@ import (
 )
 
 const (
-	// lockTimeThreshold is the number below which a lock time is
-	// interpreted to be a block number.  Since an average of one block
-	// is generated per 10 minutes, this allows blocks for about 9,512
-	// years.  However, if the field is interpreted as a timestamp, given
-	// the lock time is a uint32, the max is sometime around 2106.
-	lockTimeThreshold uint32 = 5e8 // Tue Nov 5 00:53:20 1985 UTC
-
 	// maxRejectReasonLen is the maximum length of a sanitized reject reason
 	// that will be logged.
 	maxRejectReasonLen = 250
@@ -124,6 +123,7 @@ func useLogger(subsystemID string, logger btclog.Logger) {
 
 	case "PEER":
 		peerLog = logger
+		peer.UseLogger(logger)
 
 	case "RPCS":
 		rpcsLog = logger
@@ -213,9 +213,9 @@ func directionString(inbound bool) string {
 func formatLockTime(lockTime uint32) string {
 	// The lock time field of a transaction is either a block height at
 	// which the transaction is finalized or a timestamp depending on if the
-	// value is before the lockTimeThreshold.  When it is under the
+	// value is before the txscript.LockTimeThreshold.  When it is under the
 	// threshold it is a block height.
-	if lockTime < lockTimeThreshold {
+	if lockTime < txscript.LockTimeThreshold {
 		return fmt.Sprintf("height %d", lockTime)
 	}
 
