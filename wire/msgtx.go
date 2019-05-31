@@ -790,25 +790,6 @@ func (msg *MsgTx) SerializeNoWitness(w io.Writer) error {
 // SerializeSize returns the number of bytes it would take to serialize the
 // the transaction.
 func (msg *MsgTx) SerializeSize() int {
-	// Version 4 bytes + Time 4 bytes+ LockTime 4 bytes + Serialized varint
-	// size for the number of transaction inputs and outputs.
-	n := 12 + VarIntSerializeSize(uint64(len(msg.TxIn))) +
-		VarIntSerializeSize(uint64(len(msg.TxOut)))
-
-	for _, txIn := range msg.TxIn {
-		n += txIn.SerializeSize()
-	}
-
-	for _, txOut := range msg.TxOut {
-		n += txOut.SerializeSize()
-	}
-
-	return n
-}
-
-// SerializeSize returns the number of bytes it would take to serialize the
-// the transaction.
-func (msg *MsgTx) SerializeSize() int {
 	n := msg.baseSize()
 
 	if msg.HasWitness() {
@@ -822,7 +803,8 @@ func (msg *MsgTx) SerializeSize() int {
 		}
 	}
 
-	return n
+	// TimeStamp 4 bytes
+	return n + 4
 }
 
 // SerializeSizeStripped returns the number of bytes it would take to serialize
