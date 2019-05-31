@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/ppcsuite/ppcd/btcec"
 )
 
 type pubKeyTest struct {
