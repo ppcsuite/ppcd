@@ -10,20 +10,12 @@ import (
 	"fmt"
 	"time"
 
-<<<<<<< ours:mining.go
 	"github.com/ppcsuite/btcutil"
 	"github.com/ppcsuite/ppcd/blockchain"
-	"github.com/ppcsuite/ppcd/database"
+	"github.com/ppcsuite/ppcd/chaincfg"
+	"github.com/ppcsuite/ppcd/chaincfg/chainhash"
 	"github.com/ppcsuite/ppcd/txscript"
 	"github.com/ppcsuite/ppcd/wire"
-=======
-	"github.com/btcsuite/btcd/blockchain"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
->>>>>>> theirs:mining/mining.go
 )
 
 const (
@@ -37,13 +29,8 @@ const (
 
 	// CoinbaseFlags is added to the coinbase script of a generated block
 	// and is used to monitor BIP16 support as well as blocks that are
-<<<<<<< ours:mining.go
 	// generated via ppcd.
 	coinbaseFlags = "/P2SH/ppcd/"
-=======
-	// generated via btcd.
-	CoinbaseFlags = "/P2SH/btcd/"
->>>>>>> theirs:mining/mining.go
 )
 
 // TxDesc is a descriptor about a transaction in a transaction source along with
@@ -527,13 +514,8 @@ mempoolLoop:
 		// A block can't have more than one coinbase or contain
 		// non-finalized transactions.
 		tx := txDesc.Tx
-<<<<<<< ours:mining.go
 		if blockchain.IsCoinBase(tx) || blockchain.IsCoinStake(tx) { // ppc:
 			minrLog.Tracef("Skipping coinbase/coinstake tx %s", tx.Sha())
-=======
-		if blockchain.IsCoinBase(tx) {
-			log.Tracef("Skipping coinbase tx %s", tx.Hash())
->>>>>>> theirs:mining/mining.go
 			continue
 		}
 		if !blockchain.IsFinalizedTransaction(tx, nextBlockHeight,
@@ -775,11 +757,7 @@ mempoolLoop:
 		// Ensure the transaction inputs pass all of the necessary
 		// preconditions before allowing it to be added to the block.
 		_, err = blockchain.CheckTransactionInputs(tx, nextBlockHeight,
-<<<<<<< ours:mining.go
 			blockTxStore, blockManager.blockChain) // ppc: TODO(mably)
-=======
-			blockUtxos, g.chainParams)
->>>>>>> theirs:mining/mining.go
 		if err != nil {
 			log.Tracef("Skipping tx %s due to error in "+
 				"CheckTransactionInputs: %v", tx.Hash(), err)
@@ -881,7 +859,6 @@ mempoolLoop:
 	// Calculate the required difficulty for the block.  The timestamp
 	// is potentially adjusted to ensure it comes after the median time of
 	// the last several blocks per the chain consensus rules.
-<<<<<<< ours:mining.go
 	var ts time.Time
 	if coinStakeTx == nil {
 		ts, err = medianAdjustedTime(chainState, timeSource)
@@ -893,17 +870,6 @@ mempoolLoop:
 	}
 	requiredDifficulty, err :=
 		blockManager.PPCCalcNextRequiredDifficulty(coinStakeTx != nil) // ppc:
-=======
-	ts := medianAdjustedTime(best, g.timeSource)
-	reqDifficulty, err := g.chain.CalcNextRequiredDifficulty(ts)
-	if err != nil {
-		return nil, err
-	}
-
-	// Calculate the next expected block version based on the state of the
-	// rule change deployments.
-	nextBlockVersion, err := g.chain.CalcNextBlockVersion()
->>>>>>> theirs:mining/mining.go
 	if err != nil {
 		return nil, err
 	}
@@ -972,16 +938,10 @@ func (g *BlkTmplGenerator) UpdateBlockTime(msgBlock *wire.MsgBlock) error {
 	newTime := medianAdjustedTime(g.chain.BestSnapshot(), g.timeSource)
 	msgBlock.Header.Timestamp = newTime
 
-<<<<<<< ours:mining.go
 	// If running on a network that requires recalculating the difficulty,
 	// do so now.
 	if bManager.server.chainParams.ResetMinDifficulty {
 		difficulty, err := bManager.CalcNextRequiredDifficulty(newTimestamp)
-=======
-	// Recalculate the difficulty if running on a network that requires it.
-	if g.chainParams.ReduceMinDifficulty {
-		difficulty, err := g.chain.CalcNextRequiredDifficulty(newTime)
->>>>>>> theirs:mining/mining.go
 		if err != nil {
 			return err
 		}
