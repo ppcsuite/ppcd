@@ -22,24 +22,13 @@ type params struct {
 
 // mainNetParams contains parameters specific to the main network
 // (wire.MainNet).  NOTE: The RPC port is intentionally different than the
-// reference implementation because btcd does not handle wallet requests.  The
+// reference implementation because ppcd does not handle wallet requests.  The
 // separate wallet process listens on the well-known port and forwards requests
-// it does not handle on to btcd.  This approach allows the wallet process
+// it does not handle on to ppcd.  This approach allows the wallet process
 // to emulate the full reference implementation RPC API.
 var mainNetParams = params{
 	Params:  &chaincfg.MainNetParams,
-<<<<<<< HEAD
-	rpcPort: "9902",
-	dnsSeeds: []string{
-		"seed.ppcoin.net",
-		"seedppc.ppcoin.net",
-		"ppcseed.ns.7server.net",
-		"dnsseed.ppc.altcointech.net",
-		"seed.diandianbi.org",
-	},
-=======
-	rpcPort: "8334",
->>>>>>> BTCD_0_12_0_BETA
+	rpcPort: "9903",
 }
 
 // regressionNetParams contains parameters specific to the regression test
@@ -54,16 +43,9 @@ var regressionNetParams = params{
 // testNet3Params contains parameters specific to the test network (version 3)
 // (wire.TestNet3).  NOTE: The RPC port is intentionally different than the
 // reference implementation - see the mainNetParams comment for details.
-var testNet3Params = params{
-	Params:  &chaincfg.TestNet3Params,
-	rpcPort: "18334",
-<<<<<<< HEAD
-	dnsSeeds: []string{
-		"tnseed.ppcoin.net",
-		"tnseedppc.ppcoin.net",
-	},
-=======
->>>>>>> BTCD_0_12_0_BETA
+var testNetParams = params{
+	Params:  &chaincfg.TestNetParams,
+	rpcPort: "9904",
 }
 
 // simNetParams contains parameters specific to the simulation test network
@@ -74,17 +56,17 @@ var simNetParams = params{
 }
 
 // netName returns the name used when referring to a bitcoin network.  At the
-// time of writing, btcd currently places blocks for testnet version 3 in the
+// time of writing, ppcd currently places blocks for testnet in the
 // data and log directory "testnet", which does not match the Name field of the
-// chaincfg parameters.  This function can be used to override this directory name
-// as "testnet" when the passed active network matches wire.TestNet3.
+// chaincfg parameters.  This function can be used to override this directory
+// name as "testnet" when the passed active network matches wire.TestNet.
 //
 // A proper upgrade to move the data and log directories for this network to
-// "testnet3" is planned for the future, at which point this function can be
+// "testnet" is planned for the future, at which point this function can be
 // removed and the network parameter's name used instead.
 func netName(chainParams *params) string {
 	switch chainParams.Net {
-	case wire.TestNet3:
+	case wire.TestNet:
 		return "testnet"
 	default:
 		return chainParams.Name
