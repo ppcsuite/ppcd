@@ -6,6 +6,8 @@ package wire
 
 import (
 	"io"
+
+	"github.com/ppcsuite/ppcd/chaincfg/chainhash"
 )
 
 // MsgCheckPoint implements the Message interface and represents a bitcoin reject
@@ -20,7 +22,7 @@ type MsgCheckPoint struct {
 
 	// Hash identifies a specific block or transaction that was rejected
 	// and therefore only applies the MsgBlock and MsgTx messages.
-	Hash ShaHash
+	Hash chainhash.Hash
 }
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
