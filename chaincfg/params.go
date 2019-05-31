@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ppcsuite/ppcd/chaincfg/chainhash"
 	"github.com/ppcsuite/ppcd/wire"
-	"github.com/ppscuite/ppcd/chaincfg/chainhash"
 )
 
 // These variables are the chain proof-of-work limit parameters for each default
