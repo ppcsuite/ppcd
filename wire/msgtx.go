@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ppcsuite/btcd/chaincfg/chainhash"
+	"github.com/ppcsuite/ppcd/chaincfg/chainhash"
 )
 
 const (

@@ -12,12 +12,8 @@ import (
 	"testing"
 	"time"
 
-<<<<<<< ours:wire/_msgmerkleblock_test.go
-=======
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
->>>>>>> theirs:wire/msgmerkleblock_test.go
 	"github.com/davecgh/go-spew/spew"
-	"github.com/ppcsuite/ppcd/wire"
+	"github.com/ppcsuite/ppcd/chaincfg/chainhash"
 )
 
 // TestMerkleBlock tests the MsgMerkleBlock API.
