@@ -11,7 +11,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ppcsuite/ppcd/btcjson"
+	"github.com/gcash/bchd/btcjson"
+	"github.com/ppcsuite/ppcd/wire"
 )
 
 // TestChainSvrCmds tests all of the chain server commands marshal and unmarshal
@@ -63,7 +64,7 @@ func TestChainSvrCmds(t *testing.T) {
 			name: "createrawtransaction optional",
 			newCmd: func() (interface{}, error) {
 				return btcjson.NewCmd("createrawtransaction", `[{"txid":"123","vout":1}]`,
-					`{"456":0.0123}`, 12312333333)
+					`{"456":0.0123}`, int64(12312333333))
 			},
 			staticCmd: func() interface{} {
 				txInputs := []btcjson.TransactionInput{
@@ -318,6 +319,38 @@ func TestChainSvrCmds(t *testing.T) {
 			},
 		},
 		{
+			name: "getcfilter",
+			newCmd: func() (interface{}, error) {
+				return btcjson.NewCmd("getcfilter", "123",
+					wire.GCSFilterRegular)
+			},
+			staticCmd: func() interface{} {
+				return btcjson.NewGetCFilterCmd("123",
+					wire.GCSFilterRegular)
+			},
+			marshalled: `{"jsonrpc":"1.0","method":"getcfilter","params":["123",0],"id":1}`,
+			unmarshalled: &btcjson.GetCFilterCmd{
+				Hash:       "123",
+				FilterType: wire.GCSFilterRegular,
+			},
+		},
+		{
+			name: "getcfilterheader",
+			newCmd: func() (interface{}, error) {
+				return btcjson.NewCmd("getcfilterheader", "123",
+					wire.GCSFilterRegular)
+			},
+			staticCmd: func() interface{} {
+				return btcjson.NewGetCFilterHeaderCmd("123",
+					wire.GCSFilterRegular)
+			},
+			marshalled: `{"jsonrpc":"1.0","method":"getcfilterheader","params":["123",0],"id":1}`,
+			unmarshalled: &btcjson.GetCFilterHeaderCmd{
+				Hash:       "123",
+				FilterType: wire.GCSFilterRegular,
+			},
+		},
+		{
 			name: "getchaintips",
 			newCmd: func() (interface{}, error) {
 				return btcjson.NewCmd("getchaintips")
@@ -382,6 +415,19 @@ func TestChainSvrCmds(t *testing.T) {
 			},
 			marshalled:   `{"jsonrpc":"1.0","method":"getinfo","params":[],"id":1}`,
 			unmarshalled: &btcjson.GetInfoCmd{},
+		},
+		{
+			name: "getmempoolentry",
+			newCmd: func() (interface{}, error) {
+				return btcjson.NewCmd("getmempoolentry", "txhash")
+			},
+			staticCmd: func() interface{} {
+				return btcjson.NewGetMempoolEntryCmd("txhash")
+			},
+			marshalled: `{"jsonrpc":"1.0","method":"getmempoolentry","params":["txhash"],"id":1}`,
+			unmarshalled: &btcjson.GetMempoolEntryCmd{
+				TxID: "txhash",
+			},
 		},
 		{
 			name: "getmempoolinfo",
@@ -682,6 +728,19 @@ func TestChainSvrCmds(t *testing.T) {
 			unmarshalled: &btcjson.PingCmd{},
 		},
 		{
+			name: "preciousblock",
+			newCmd: func() (interface{}, error) {
+				return btcjson.NewCmd("preciousblock", "0123")
+			},
+			staticCmd: func() interface{} {
+				return btcjson.NewPreciousBlockCmd("0123")
+			},
+			marshalled: `{"jsonrpc":"1.0","method":"preciousblock","params":["0123"],"id":1}`,
+			unmarshalled: &btcjson.PreciousBlockCmd{
+				BlockHash: "0123",
+			},
+		},
+		{
 			name: "reconsiderblock",
 			newCmd: func() (interface{}, error) {
 				return btcjson.NewCmd("reconsiderblock", "123")
@@ -934,6 +993,17 @@ func TestChainSvrCmds(t *testing.T) {
 			},
 		},
 		{
+			name: "uptime",
+			newCmd: func() (interface{}, error) {
+				return btcjson.NewCmd("uptime")
+			},
+			staticCmd: func() interface{} {
+				return btcjson.NewUptimeCmd()
+			},
+			marshalled:   `{"jsonrpc":"1.0","method":"uptime","params":[],"id":1}`,
+			unmarshalled: &btcjson.UptimeCmd{},
+		},
+		{
 			name: "validateaddress",
 			newCmd: func() (interface{}, error) {
 				return btcjson.NewCmd("validateaddress", "1Address")
@@ -1121,8 +1191,8 @@ func TestChainSvrCmdErrors(t *testing.T) {
 	for i, test := range tests {
 		err := json.Unmarshal([]byte(test.marshalled), &test.result)
 		if reflect.TypeOf(err) != reflect.TypeOf(test.err) {
-			t.Errorf("Test #%d (%s) wrong error - got %T (%[2]v), "+
-				"want %T", i, test.name, err, test.err)
+			t.Errorf("Test #%d (%s) wrong error - got %T (%v), "+
+				"want %T", i, test.name, err, err, test.err)
 			continue
 		}
 

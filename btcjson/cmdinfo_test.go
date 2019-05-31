@@ -11,7 +11,7 @@ import (
 	"github.com/ppcsuite/ppcd/btcjson"
 )
 
-// TestCmdMethod tests the CmdMethod function to ensure it retuns the expected
+// TestCmdMethod tests the CmdMethod function to ensure it retunrs the expected
 // methods and errors.
 func TestCmdMethod(t *testing.T) {
 	t.Parallel()
@@ -183,7 +183,7 @@ func TestMethodUsageText(t *testing.T) {
 			continue
 		}
 
-		// Get the usage again to excerise caching.
+		// Get the usage again to exercise caching.
 		usage, err = btcjson.MethodUsageText(test.method)
 		if err != nil {
 			t.Errorf("Test #%d (%s) unexpected error: %v", i,

@@ -1,13 +1,13 @@
-// Copyright (c) 2013-2015 The btcsuite developers
+// Copyright (c) 2013-2017 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package txscript_test
+package txscript
 
 import (
 	"testing"
 
-	"github.com/ppcsuite/ppcd/txscript"
+	"github.com/ppcsuite/ppcd/chaincfg/chainhash"
 	"github.com/ppcsuite/ppcd/wire"
 )
 
@@ -16,26 +16,20 @@ import (
 func TestBadPC(t *testing.T) {
 	t.Parallel()
 
-	type pcTest struct {
+	tests := []struct {
 		script, off int
+	}{
+		{script: 2, off: 0},
+		{script: 0, off: 2},
 	}
-	pcTests := []pcTest{
-		{
-			script: 2,
-			off:    0,
-		},
-		{
-			script: 0,
-			off:    2,
-		},
-	}
+
 	// tx with almost empty scripts.
 	tx := &wire.MsgTx{
 		Version: 1,
 		TxIn: []*wire.TxIn{
 			{
 				PreviousOutPoint: wire.OutPoint{
-					Hash: wire.ShaHash([32]byte{
+					Hash: chainhash.Hash([32]byte{
 						0xc9, 0x97, 0xa5, 0xe5,
 						0x6e, 0x10, 0x41, 0x02,
 						0xfa, 0x20, 0x9c, 0x6a,
@@ -47,28 +41,27 @@ func TestBadPC(t *testing.T) {
 					}),
 					Index: 0,
 				},
-				SignatureScript: []uint8{txscript.OP_NOP},
+				SignatureScript: mustParseShortForm("NOP"),
 				Sequence:        4294967295,
 			},
 		},
-		TxOut: []*wire.TxOut{
-			{
-				Value:    1000000000,
-				PkScript: nil,
-			},
-		},
+		TxOut: []*wire.TxOut{{
+			Value:    1000000000,
+			PkScript: nil,
+		}},
 		LockTime: 0,
 	}
-	pkScript := []byte{txscript.OP_NOP}
+	pkScript := mustParseShortForm("NOP")
 
-	for _, test := range pcTests {
-		vm, err := txscript.NewEngine(pkScript, tx, 0, 0, nil)
+	for _, test := range tests {
+		vm, err := NewEngine(pkScript, tx, 0, 0, nil, nil, -1)
 		if err != nil {
 			t.Errorf("Failed to create script: %v", err)
 		}
 
 		// set to after all scripts
-		vm.TstSetPC(test.script, test.off)
+		vm.scriptIdx = test.script
+		vm.scriptOff = test.off
 
 		_, err = vm.Step()
 		if err == nil {
@@ -92,48 +85,33 @@ func TestCheckErrorCondition(t *testing.T) {
 	// tx with almost empty scripts.
 	tx := &wire.MsgTx{
 		Version: 1,
-		TxIn: []*wire.TxIn{
-			{
-				PreviousOutPoint: wire.OutPoint{
-					Hash: wire.ShaHash([32]byte{
-						0xc9, 0x97, 0xa5, 0xe5,
-						0x6e, 0x10, 0x41, 0x02,
-						0xfa, 0x20, 0x9c, 0x6a,
-						0x85, 0x2d, 0xd9, 0x06,
-						0x60, 0xa2, 0x0b, 0x2d,
-						0x9c, 0x35, 0x24, 0x23,
-						0xed, 0xce, 0x25, 0x85,
-						0x7f, 0xcd, 0x37, 0x04,
-					}),
-					Index: 0,
-				},
-				SignatureScript: []uint8{},
-				Sequence:        4294967295,
+		TxIn: []*wire.TxIn{{
+			PreviousOutPoint: wire.OutPoint{
+				Hash: chainhash.Hash([32]byte{
+					0xc9, 0x97, 0xa5, 0xe5,
+					0x6e, 0x10, 0x41, 0x02,
+					0xfa, 0x20, 0x9c, 0x6a,
+					0x85, 0x2d, 0xd9, 0x06,
+					0x60, 0xa2, 0x0b, 0x2d,
+					0x9c, 0x35, 0x24, 0x23,
+					0xed, 0xce, 0x25, 0x85,
+					0x7f, 0xcd, 0x37, 0x04,
+				}),
+				Index: 0,
 			},
-		},
-		TxOut: []*wire.TxOut{
-			{
-				Value:    1000000000,
-				PkScript: nil,
-			},
-		},
+			SignatureScript: nil,
+			Sequence:        4294967295,
+		}},
+		TxOut: []*wire.TxOut{{
+			Value:    1000000000,
+			PkScript: nil,
+		}},
 		LockTime: 0,
 	}
-	pkScript := []byte{
-		txscript.OP_NOP,
-		txscript.OP_NOP,
-		txscript.OP_NOP,
-		txscript.OP_NOP,
-		txscript.OP_NOP,
-		txscript.OP_NOP,
-		txscript.OP_NOP,
-		txscript.OP_NOP,
-		txscript.OP_NOP,
-		txscript.OP_NOP,
-		txscript.OP_TRUE,
-	}
+	pkScript := mustParseShortForm("NOP NOP NOP NOP NOP NOP NOP NOP NOP" +
+		" NOP TRUE")
 
-	vm, err := txscript.NewEngine(pkScript, tx, 0, 0, nil)
+	vm, err := NewEngine(pkScript, tx, 0, 0, nil, nil, 0)
 	if err != nil {
 		t.Errorf("failed to create script: %v", err)
 	}
@@ -141,29 +119,24 @@ func TestCheckErrorCondition(t *testing.T) {
 	for i := 0; i < len(pkScript)-1; i++ {
 		done, err := vm.Step()
 		if err != nil {
-			t.Errorf("failed to step %dth time: %v", i, err)
-			return
+			t.Fatalf("failed to step %dth time: %v", i, err)
 		}
 		if done {
-			t.Errorf("finshed early on %dth time", i)
-			return
+			t.Fatalf("finshed early on %dth time", i)
 		}
 
 		err = vm.CheckErrorCondition(false)
-		if err != txscript.ErrStackScriptUnfinished {
-			t.Errorf("got unexepected error %v on %dth iteration",
+		if !IsErrorCode(err, ErrScriptUnfinished) {
+			t.Fatalf("got unexepected error %v on %dth iteration",
 				err, i)
-			return
 		}
 	}
 	done, err := vm.Step()
 	if err != nil {
-		t.Errorf("final step failed %v", err)
-		return
+		t.Fatalf("final step failed %v", err)
 	}
 	if !done {
-		t.Errorf("final step isn't done!")
-		return
+		t.Fatalf("final step isn't done!")
 	}
 
 	err = vm.CheckErrorCondition(false)
@@ -177,8 +150,8 @@ func TestCheckErrorCondition(t *testing.T) {
 func TestInvalidFlagCombinations(t *testing.T) {
 	t.Parallel()
 
-	tests := []txscript.ScriptFlags{
-		txscript.ScriptVerifyCleanStack,
+	tests := []ScriptFlags{
+		ScriptVerifyCleanStack,
 	}
 
 	// tx with almost empty scripts.
@@ -187,7 +160,7 @@ func TestInvalidFlagCombinations(t *testing.T) {
 		TxIn: []*wire.TxIn{
 			{
 				PreviousOutPoint: wire.OutPoint{
-					Hash: wire.ShaHash([32]byte{
+					Hash: chainhash.Hash([32]byte{
 						0xc9, 0x97, 0xa5, 0xe5,
 						0x6e, 0x10, 0x41, 0x02,
 						0xfa, 0x20, 0x9c, 0x6a,
@@ -199,7 +172,7 @@ func TestInvalidFlagCombinations(t *testing.T) {
 					}),
 					Index: 0,
 				},
-				SignatureScript: []uint8{txscript.OP_NOP},
+				SignatureScript: []uint8{OP_NOP},
 				Sequence:        4294967295,
 			},
 		},
@@ -211,11 +184,11 @@ func TestInvalidFlagCombinations(t *testing.T) {
 		},
 		LockTime: 0,
 	}
-	pkScript := []byte{txscript.OP_NOP}
+	pkScript := []byte{OP_NOP}
 
 	for i, test := range tests {
-		_, err := txscript.NewEngine(pkScript, tx, 0, test, nil)
-		if err != txscript.ErrInvalidFlags {
+		_, err := NewEngine(pkScript, tx, 0, test, nil, nil, -1)
+		if !IsErrorCode(err, ErrInvalidFlags) {
 			t.Fatalf("TestInvalidFlagCombinations #%d unexpected "+
 				"error: %v", i, err)
 		}
@@ -234,7 +207,7 @@ func TestCheckPubKeyEncoding(t *testing.T) {
 	}{
 		{
 			name: "uncompressed ok",
-			key: decodeHex("0411db93e1dcdb8a016b49840f8c53bc1eb68" +
+			key: hexToBytes("0411db93e1dcdb8a016b49840f8c53bc1eb68" +
 				"a382e97b1482ecad7b148a6909a5cb2e0eaddfb84ccf" +
 				"9744464f82e160bfa9b8b64f9d4c03f999b8643f656b" +
 				"412a3"),
@@ -242,19 +215,19 @@ func TestCheckPubKeyEncoding(t *testing.T) {
 		},
 		{
 			name: "compressed ok",
-			key: decodeHex("02ce0b14fb842b1ba549fdd675c98075f12e9" +
+			key: hexToBytes("02ce0b14fb842b1ba549fdd675c98075f12e9" +
 				"c510f8ef52bd021a9a1f4809d3b4d"),
 			isValid: true,
 		},
 		{
 			name: "compressed ok",
-			key: decodeHex("032689c7c2dab13309fb143e0e8fe39634252" +
+			key: hexToBytes("032689c7c2dab13309fb143e0e8fe39634252" +
 				"1887e976690b6b47f5b2a4b7d448e"),
 			isValid: true,
 		},
 		{
 			name: "hybrid",
-			key: decodeHex("0679be667ef9dcbbac55a06295ce870b07029" +
+			key: hexToBytes("0679be667ef9dcbbac55a06295ce870b07029" +
 				"bfcdb2dce28d959f2815b16f81798483ada7726a3c46" +
 				"55da4fbfc0e1108a8fd17b448a68554199c47d08ffb1" +
 				"0d4b8"),
@@ -267,9 +240,9 @@ func TestCheckPubKeyEncoding(t *testing.T) {
 		},
 	}
 
-	flags := txscript.ScriptVerifyStrictEncoding
+	vm := Engine{flags: ScriptVerifyStrictEncoding}
 	for _, test := range tests {
-		err := txscript.TstCheckPubKeyEncoding(test.key, flags)
+		err := vm.checkPubKeyEncoding(test.key)
 		if err != nil && test.isValid {
 			t.Errorf("checkSignatureEncoding test '%s' failed "+
 				"when it should have succeeded: %v", test.name,
@@ -294,7 +267,7 @@ func TestCheckSignatureEncoding(t *testing.T) {
 	}{
 		{
 			name: "valid signature",
-			sig: decodeHex("304402204e45e16932b8af514961a1d3a1a25" +
+			sig: hexToBytes("304402204e45e16932b8af514961a1d3a1a25" +
 				"fdf3f4f7732e9d624c6c61548ab5fb8cd41022018152" +
 				"2ec8eca07de4860a4acdd12909d831cc56cbbac46220" +
 				"82221a8768d1d09"),
@@ -307,7 +280,7 @@ func TestCheckSignatureEncoding(t *testing.T) {
 		},
 		{
 			name: "bad magic",
-			sig: decodeHex("314402204e45e16932b8af514961a1d3a1a25" +
+			sig: hexToBytes("314402204e45e16932b8af514961a1d3a1a25" +
 				"fdf3f4f7732e9d624c6c61548ab5fb8cd41022018152" +
 				"2ec8eca07de4860a4acdd12909d831cc56cbbac46220" +
 				"82221a8768d1d09"),
@@ -315,7 +288,7 @@ func TestCheckSignatureEncoding(t *testing.T) {
 		},
 		{
 			name: "bad 1st int marker magic",
-			sig: decodeHex("304403204e45e16932b8af514961a1d3a1a25" +
+			sig: hexToBytes("304403204e45e16932b8af514961a1d3a1a25" +
 				"fdf3f4f7732e9d624c6c61548ab5fb8cd41022018152" +
 				"2ec8eca07de4860a4acdd12909d831cc56cbbac46220" +
 				"82221a8768d1d09"),
@@ -323,7 +296,7 @@ func TestCheckSignatureEncoding(t *testing.T) {
 		},
 		{
 			name: "bad 2nd int marker",
-			sig: decodeHex("304402204e45e16932b8af514961a1d3a1a25" +
+			sig: hexToBytes("304402204e45e16932b8af514961a1d3a1a25" +
 				"fdf3f4f7732e9d624c6c61548ab5fb8cd41032018152" +
 				"2ec8eca07de4860a4acdd12909d831cc56cbbac46220" +
 				"82221a8768d1d09"),
@@ -331,7 +304,7 @@ func TestCheckSignatureEncoding(t *testing.T) {
 		},
 		{
 			name: "short len",
-			sig: decodeHex("304302204e45e16932b8af514961a1d3a1a25" +
+			sig: hexToBytes("304302204e45e16932b8af514961a1d3a1a25" +
 				"fdf3f4f7732e9d624c6c61548ab5fb8cd41022018152" +
 				"2ec8eca07de4860a4acdd12909d831cc56cbbac46220" +
 				"82221a8768d1d09"),
@@ -339,7 +312,7 @@ func TestCheckSignatureEncoding(t *testing.T) {
 		},
 		{
 			name: "long len",
-			sig: decodeHex("304502204e45e16932b8af514961a1d3a1a25" +
+			sig: hexToBytes("304502204e45e16932b8af514961a1d3a1a25" +
 				"fdf3f4f7732e9d624c6c61548ab5fb8cd41022018152" +
 				"2ec8eca07de4860a4acdd12909d831cc56cbbac46220" +
 				"82221a8768d1d09"),
@@ -347,7 +320,7 @@ func TestCheckSignatureEncoding(t *testing.T) {
 		},
 		{
 			name: "long X",
-			sig: decodeHex("304402424e45e16932b8af514961a1d3a1a25" +
+			sig: hexToBytes("304402424e45e16932b8af514961a1d3a1a25" +
 				"fdf3f4f7732e9d624c6c61548ab5fb8cd41022018152" +
 				"2ec8eca07de4860a4acdd12909d831cc56cbbac46220" +
 				"82221a8768d1d09"),
@@ -355,7 +328,7 @@ func TestCheckSignatureEncoding(t *testing.T) {
 		},
 		{
 			name: "long Y",
-			sig: decodeHex("304402204e45e16932b8af514961a1d3a1a25" +
+			sig: hexToBytes("304402204e45e16932b8af514961a1d3a1a25" +
 				"fdf3f4f7732e9d624c6c61548ab5fb8cd41022118152" +
 				"2ec8eca07de4860a4acdd12909d831cc56cbbac46220" +
 				"82221a8768d1d09"),
@@ -363,7 +336,7 @@ func TestCheckSignatureEncoding(t *testing.T) {
 		},
 		{
 			name: "short Y",
-			sig: decodeHex("304402204e45e16932b8af514961a1d3a1a25" +
+			sig: hexToBytes("304402204e45e16932b8af514961a1d3a1a25" +
 				"fdf3f4f7732e9d624c6c61548ab5fb8cd41021918152" +
 				"2ec8eca07de4860a4acdd12909d831cc56cbbac46220" +
 				"82221a8768d1d09"),
@@ -371,7 +344,7 @@ func TestCheckSignatureEncoding(t *testing.T) {
 		},
 		{
 			name: "trailing crap",
-			sig: decodeHex("304402204e45e16932b8af514961a1d3a1a25" +
+			sig: hexToBytes("304402204e45e16932b8af514961a1d3a1a25" +
 				"fdf3f4f7732e9d624c6c61548ab5fb8cd41022018152" +
 				"2ec8eca07de4860a4acdd12909d831cc56cbbac46220" +
 				"82221a8768d1d0901"),
@@ -379,7 +352,7 @@ func TestCheckSignatureEncoding(t *testing.T) {
 		},
 		{
 			name: "X == N ",
-			sig: decodeHex("30440220fffffffffffffffffffffffffffff" +
+			sig: hexToBytes("30440220fffffffffffffffffffffffffffff" +
 				"ffebaaedce6af48a03bbfd25e8cd0364141022018152" +
 				"2ec8eca07de4860a4acdd12909d831cc56cbbac46220" +
 				"82221a8768d1d09"),
@@ -387,7 +360,7 @@ func TestCheckSignatureEncoding(t *testing.T) {
 		},
 		{
 			name: "X == N ",
-			sig: decodeHex("30440220fffffffffffffffffffffffffffff" +
+			sig: hexToBytes("30440220fffffffffffffffffffffffffffff" +
 				"ffebaaedce6af48a03bbfd25e8cd0364142022018152" +
 				"2ec8eca07de4860a4acdd12909d831cc56cbbac46220" +
 				"82221a8768d1d09"),
@@ -395,7 +368,7 @@ func TestCheckSignatureEncoding(t *testing.T) {
 		},
 		{
 			name: "Y == N",
-			sig: decodeHex("304402204e45e16932b8af514961a1d3a1a25" +
+			sig: hexToBytes("304402204e45e16932b8af514961a1d3a1a25" +
 				"fdf3f4f7732e9d624c6c61548ab5fb8cd410220fffff" +
 				"ffffffffffffffffffffffffffebaaedce6af48a03bb" +
 				"fd25e8cd0364141"),
@@ -403,7 +376,7 @@ func TestCheckSignatureEncoding(t *testing.T) {
 		},
 		{
 			name: "Y > N",
-			sig: decodeHex("304402204e45e16932b8af514961a1d3a1a25" +
+			sig: hexToBytes("304402204e45e16932b8af514961a1d3a1a25" +
 				"fdf3f4f7732e9d624c6c61548ab5fb8cd410220fffff" +
 				"ffffffffffffffffffffffffffebaaedce6af48a03bb" +
 				"fd25e8cd0364142"),
@@ -411,19 +384,19 @@ func TestCheckSignatureEncoding(t *testing.T) {
 		},
 		{
 			name: "0 len X",
-			sig: decodeHex("302402000220181522ec8eca07de4860a4acd" +
+			sig: hexToBytes("302402000220181522ec8eca07de4860a4acd" +
 				"d12909d831cc56cbbac4622082221a8768d1d09"),
 			isValid: false,
 		},
 		{
 			name: "0 len Y",
-			sig: decodeHex("302402204e45e16932b8af514961a1d3a1a25" +
+			sig: hexToBytes("302402204e45e16932b8af514961a1d3a1a25" +
 				"fdf3f4f7732e9d624c6c61548ab5fb8cd410200"),
 			isValid: false,
 		},
 		{
 			name: "extra R padding",
-			sig: decodeHex("30450221004e45e16932b8af514961a1d3a1a" +
+			sig: hexToBytes("30450221004e45e16932b8af514961a1d3a1a" +
 				"25fdf3f4f7732e9d624c6c61548ab5fb8cd410220181" +
 				"522ec8eca07de4860a4acdd12909d831cc56cbbac462" +
 				"2082221a8768d1d09"),
@@ -431,7 +404,7 @@ func TestCheckSignatureEncoding(t *testing.T) {
 		},
 		{
 			name: "extra S padding",
-			sig: decodeHex("304502204e45e16932b8af514961a1d3a1a25" +
+			sig: hexToBytes("304502204e45e16932b8af514961a1d3a1a25" +
 				"fdf3f4f7732e9d624c6c61548ab5fb8cd41022100181" +
 				"522ec8eca07de4860a4acdd12909d831cc56cbbac462" +
 				"2082221a8768d1d09"),
@@ -439,9 +412,9 @@ func TestCheckSignatureEncoding(t *testing.T) {
 		},
 	}
 
-	flags := txscript.ScriptVerifyStrictEncoding
+	vm := Engine{flags: ScriptVerifyStrictEncoding}
 	for _, test := range tests {
-		err := txscript.TstCheckSignatureEncoding(test.sig, flags)
+		err := vm.checkSignatureEncoding(test.sig)
 		if err != nil && test.isValid {
 			t.Errorf("checkSignatureEncoding test '%s' failed "+
 				"when it should have succeeded: %v", test.name,

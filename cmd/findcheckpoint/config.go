@@ -1,4 +1,4 @@
-// Copyright (c) 2013 The btcsuite developers
+// Copyright (c) 2013-2016 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -9,11 +9,11 @@ import (
 	"os"
 	"path/filepath"
 
-	flags "github.com/btcsuite/go-flags"
-	"github.com/ppcsuite/btcutil"
+	"github.com/btcsuite/btcutil"
+	flags "github.com/jessevdk/go-flags"
 	"github.com/ppcsuite/ppcd/chaincfg"
 	"github.com/ppcsuite/ppcd/database"
-	_ "github.com/ppcsuite/ppcd/database/ldb"
+	_ "github.com/ppcsuite/ppcd/database/ffldb"
 	"github.com/ppcsuite/ppcd/wire"
 )
 
@@ -21,13 +21,13 @@ const (
 	minCandidates        = 1
 	maxCandidates        = 20
 	defaultNumCandidates = 5
-	defaultDbType        = "leveldb"
+	defaultDbType        = "ffldb"
 )
 
 var (
 	btcdHomeDir     = btcutil.AppDataDir("ppcd", false)
 	defaultDataDir  = filepath.Join(btcdHomeDir, "data")
-	knownDbTypes    = database.SupportedDBs()
+	knownDbTypes    = database.SupportedDrivers()
 	activeNetParams = &chaincfg.MainNetParams
 )
 

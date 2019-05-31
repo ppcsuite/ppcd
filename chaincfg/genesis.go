@@ -1,4 +1,4 @@
-// Copyright (c) 2014 The btcsuite developers
+// Copyright (c) 2014-2016 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ppcsuite/ppcd/chaincfg/chainhash"
 	"github.com/ppcsuite/ppcd/wire"
 )
 
@@ -19,7 +20,7 @@ var genesisCoinbaseTx = wire.MsgTx{
 	TxIn: []*wire.TxIn{
 		{
 			PreviousOutPoint: wire.OutPoint{
-				Hash:  wire.ShaHash{},
+				Hash:  chainhash.Hash{},
 				Index: 0xffffffff,
 			},
 			SignatureScript: []byte{
@@ -70,11 +71,11 @@ var genesisMerkleRoot = wire.ShaHash([wire.HashSize]byte{ // Make go vet happy.
 var genesisBlock = wire.MsgBlock{
 	Header: wire.BlockHeader{
 		Version:    1,
-		PrevBlock:  wire.ShaHash{},           // 0000000000000000000000000000000000000000000000000000000000000000
-		MerkleRoot: genesisMerkleRoot,        //
-		Timestamp:  time.Unix(0x502c5b7f, 0), //
-		Bits:       0x1d00ffff,               //
-		Nonce:      0x81e582ab,               //
+		PrevBlock:  chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
+		MerkleRoot: genesisMerkleRoot,        // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
+		Timestamp:  time.Unix(0x495fab29, 0), // 2009-01-03 18:15:05 +0000 UTC
+		Bits:       0x1d00ffff,               // 486604799 [00000000ffff0000000000000000000000000000000000000000000000000000]
+		Nonce:      0x7c2bac1d,               // 2083236893
 	},
 	Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
 	Signature:    []byte{},
@@ -89,7 +90,7 @@ var genesisMeta = wire.Meta{
 
 // regTestGenesisHash is the hash of the first block in the block chain for the
 // regression test network (genesis block).
-var regTestGenesisHash = wire.ShaHash([wire.HashSize]byte{ // Make go vet happy.
+var regTestGenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
 	0x06, 0x22, 0x6e, 0x46, 0x11, 0x1a, 0x0b, 0x59,
 	0xca, 0xaf, 0x12, 0x60, 0x43, 0xeb, 0x5b, 0xbf,
 	0x28, 0xc3, 0x4f, 0x3a, 0x5e, 0x33, 0x2a, 0x1f,
@@ -106,7 +107,7 @@ var regTestGenesisMerkleRoot = genesisMerkleRoot
 var regTestGenesisBlock = wire.MsgBlock{
 	Header: wire.BlockHeader{
 		Version:    1,
-		PrevBlock:  wire.ShaHash{},           // 0000000000000000000000000000000000000000000000000000000000000000
+		PrevBlock:  chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
 		MerkleRoot: regTestGenesisMerkleRoot, // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
 		Timestamp:  time.Unix(1296688602, 0), // 2011-02-02 23:16:42 +0000 UTC
 		Bits:       0x207fffff,               // 545259519 [7fffff0000000000000000000000000000000000000000000000000000000000]
@@ -115,30 +116,30 @@ var regTestGenesisBlock = wire.MsgBlock{
 	Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
 }
 
-// testNet3GenesisHash is the hash of the first block in the block chain for the
-// test network (version 3).
-var testNet3GenesisHash = wire.ShaHash([wire.HashSize]byte{ // Make go vet happy.
+// testNetGenesisHash is the hash of the first block in the block chain for the
+// test network.
+var testNetGenesisHash = wire.ShaHash([wire.HashSize]byte{ // Make go vet happy.
 	0x06, 0x9f, 0x7c, 0xc4, 0xae, 0x81, 0xca, 0x0c,
 	0x7c, 0x72, 0xcc, 0x30, 0xe6, 0x8c, 0x65, 0xb0,
 	0x17, 0xcd, 0x17, 0x3e, 0x50, 0x96, 0x65, 0x7f,
 	0x73, 0xbb, 0x57, 0xf7, 0x01, 0x00, 0x00, 0x00,
 })
 
-// testNet3GenesisMerkleRoot is the hash of the first transaction in the genesis
+// testNetGenesisMerkleRoot is the hash of the first transaction in the genesis
 // block for the test network (version 3).  It is the same as the merkle root
 // for the main network.
-var testNet3GenesisMerkleRoot = genesisMerkleRoot
+var testNetGenesisMerkleRoot = genesisMerkleRoot
 
 // testNet3GenesisBlock defines the genesis block of the block chain which
 // serves as the public transaction ledger for the test network (version 3).
 var testNet3GenesisBlock = wire.MsgBlock{
 	Header: wire.BlockHeader{
 		Version:    1,
-		PrevBlock:  wire.ShaHash{},           // 0000000000000000000000000000000000000000000000000000000000000000
-		MerkleRoot: genesisMerkleRoot,        //
-		Timestamp:  time.Unix(0x502C71D0, 0), //
-		Bits:       0x1d0fffff,               //
-		Nonce:      0x07533A5A,               //
+		PrevBlock:  chainhash.Hash{},          // 0000000000000000000000000000000000000000000000000000000000000000
+		MerkleRoot: testNet3GenesisMerkleRoot, // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
+		Timestamp:  time.Unix(1296688602, 0),  // 2011-02-02 23:16:42 +0000 UTC
+		Bits:       0x1d00ffff,                // 486604799 [00000000ffff0000000000000000000000000000000000000000000000000000]
+		Nonce:      0x18aea41a,                // 414098458
 	},
 	Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
 	Signature:    []byte{},
@@ -146,7 +147,7 @@ var testNet3GenesisBlock = wire.MsgBlock{
 
 // simNetGenesisHash is the hash of the first block in the block chain for the
 // simulation test network.
-var simNetGenesisHash = wire.ShaHash([wire.HashSize]byte{ // Make go vet happy.
+var simNetGenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
 	0xf6, 0x7a, 0xd7, 0x69, 0x5d, 0x9b, 0x66, 0x2a,
 	0x72, 0xff, 0x3d, 0x8e, 0xdb, 0xbb, 0x2d, 0xe0,
 	0xbf, 0xa6, 0x7b, 0x13, 0x97, 0x4b, 0xb9, 0x91,
@@ -163,7 +164,7 @@ var simNetGenesisMerkleRoot = genesisMerkleRoot
 var simNetGenesisBlock = wire.MsgBlock{
 	Header: wire.BlockHeader{
 		Version:    1,
-		PrevBlock:  wire.ShaHash{},           // 0000000000000000000000000000000000000000000000000000000000000000
+		PrevBlock:  chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
 		MerkleRoot: simNetGenesisMerkleRoot,  // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
 		Timestamp:  time.Unix(1401292357, 0), // 2014-05-28 15:52:37 +0000 UTC
 		Bits:       0x207fffff,               // 545259519 [7fffff0000000000000000000000000000000000000000000000000000000000]

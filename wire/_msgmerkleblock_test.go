@@ -1,8 +1,8 @@
-// Copyright (c) 2014-2015 The btcsuite developers
+// Copyright (c) 2014-2016 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package wire_test
+package wire
 
 import (
 	"bytes"
@@ -12,24 +12,29 @@ import (
 	"testing"
 	"time"
 
+<<<<<<< ours:wire/_msgmerkleblock_test.go
+=======
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+>>>>>>> theirs:wire/msgmerkleblock_test.go
 	"github.com/davecgh/go-spew/spew"
 	"github.com/ppcsuite/ppcd/wire"
 )
 
 // TestMerkleBlock tests the MsgMerkleBlock API.
 func TestMerkleBlock(t *testing.T) {
-	pver := wire.ProtocolVersion
+	pver := ProtocolVersion
+	enc := BaseEncoding
 
 	// Block 1 header.
 	prevHash := &blockOne.Header.PrevBlock
 	merkleHash := &blockOne.Header.MerkleRoot
 	bits := blockOne.Header.Bits
 	nonce := blockOne.Header.Nonce
-	bh := wire.NewBlockHeader(prevHash, merkleHash, bits, nonce)
+	bh := NewBlockHeader(1, prevHash, merkleHash, bits, nonce)
 
 	// Ensure the command is expected value.
 	wantCmd := "merkleblock"
-	msg := wire.NewMsgMerkleBlock(bh)
+	msg := NewMsgMerkleBlock(bh)
 	if cmd := msg.Command(); cmd != wantCmd {
 		t.Errorf("NewMsgBlock: wrong command - got %v want %v",
 			cmd, wantCmd)
@@ -37,7 +42,7 @@ func TestMerkleBlock(t *testing.T) {
 
 	// Ensure max payload is expected value for latest protocol version.
 	// Num addresses (varInt) + max allowed addresses.
-	wantPayload := uint32(1000000)
+	wantPayload := uint32(4000000)
 	maxPayload := msg.MaxPayloadLength(pver)
 	if maxPayload != wantPayload {
 		t.Errorf("MaxPayloadLength: wrong max payload length for "+
@@ -47,11 +52,11 @@ func TestMerkleBlock(t *testing.T) {
 
 	// Load maxTxPerBlock hashes
 	data := make([]byte, 32)
-	for i := 0; i < wire.MaxTxPerBlock; i++ {
+	for i := 0; i < maxTxPerBlock; i++ {
 		rand.Read(data)
-		hash, err := wire.NewShaHash(data)
+		hash, err := chainhash.NewHash(data)
 		if err != nil {
-			t.Errorf("NewShaHash failed: %v\n", err)
+			t.Errorf("NewHash failed: %v\n", err)
 			return
 		}
 
@@ -63,9 +68,9 @@ func TestMerkleBlock(t *testing.T) {
 
 	// Add one more Tx to test failure.
 	rand.Read(data)
-	hash, err := wire.NewShaHash(data)
+	hash, err := chainhash.NewHash(data)
 	if err != nil {
-		t.Errorf("NewShaHash failed: %v\n", err)
+		t.Errorf("NewHash failed: %v\n", err)
 		return
 	}
 
@@ -76,21 +81,21 @@ func TestMerkleBlock(t *testing.T) {
 
 	// Test encode with latest protocol version.
 	var buf bytes.Buffer
-	err = msg.BtcEncode(&buf, pver)
+	err = msg.BtcEncode(&buf, pver, enc)
 	if err != nil {
 		t.Errorf("encode of MsgMerkleBlock failed %v err <%v>", msg, err)
 	}
 
 	// Test decode with latest protocol version.
-	readmsg := wire.MsgMerkleBlock{}
-	err = readmsg.BtcDecode(&buf, pver)
+	readmsg := MsgMerkleBlock{}
+	err = readmsg.BtcDecode(&buf, pver, enc)
 	if err != nil {
 		t.Errorf("decode of MsgMerkleBlock failed [%v] err <%v>", buf, err)
 	}
 
 	// Force extra hash to test maxTxPerBlock.
 	msg.Hashes = append(msg.Hashes, hash)
-	err = msg.BtcEncode(&buf, pver)
+	err = msg.BtcEncode(&buf, pver, enc)
 	if err == nil {
 		t.Errorf("encode of MsgMerkleBlock succeeded with too many " +
 			"tx hashes when it should have failed")
@@ -100,8 +105,8 @@ func TestMerkleBlock(t *testing.T) {
 	// Force too many flag bytes to test maxFlagsPerMerkleBlock.
 	// Reset the number of hashes back to a valid value.
 	msg.Hashes = msg.Hashes[len(msg.Hashes)-1:]
-	msg.Flags = make([]byte, wire.MaxFlagsPerMerkleBlock+1)
-	err = msg.BtcEncode(&buf, pver)
+	msg.Flags = make([]byte, maxFlagsPerMerkleBlock+1)
+	err = msg.BtcEncode(&buf, pver, enc)
 	if err == nil {
 		t.Errorf("encode of MsgMerkleBlock succeeded with too many " +
 			"flag bytes when it should have failed")
@@ -117,21 +122,21 @@ func TestMerkleBlockCrossProtocol(t *testing.T) {
 	merkleHash := &blockOne.Header.MerkleRoot
 	bits := blockOne.Header.Bits
 	nonce := blockOne.Header.Nonce
-	bh := wire.NewBlockHeader(prevHash, merkleHash, bits, nonce)
+	bh := NewBlockHeader(1, prevHash, merkleHash, bits, nonce)
 
-	msg := wire.NewMsgMerkleBlock(bh)
+	msg := NewMsgMerkleBlock(bh)
 
 	// Encode with latest protocol version.
 	var buf bytes.Buffer
-	err := msg.BtcEncode(&buf, wire.ProtocolVersion)
+	err := msg.BtcEncode(&buf, ProtocolVersion, BaseEncoding)
 	if err != nil {
 		t.Errorf("encode of NewMsgFilterLoad failed %v err <%v>", msg,
 			err)
 	}
 
 	// Decode with old protocol version.
-	var readmsg wire.MsgFilterLoad
-	err = readmsg.BtcDecode(&buf, wire.BIP0031Version)
+	var readmsg MsgFilterLoad
+	err = readmsg.BtcDecode(&buf, BIP0031Version, BaseEncoding)
 	if err == nil {
 		t.Errorf("decode of MsgFilterLoad succeeded when it shouldn't have %v",
 			msg)
@@ -142,21 +147,22 @@ func TestMerkleBlockCrossProtocol(t *testing.T) {
 // various numbers of transaction hashes and protocol versions.
 func TestMerkleBlockWire(t *testing.T) {
 	tests := []struct {
-		in   *wire.MsgMerkleBlock // Message to encode
-		out  *wire.MsgMerkleBlock // Expected decoded message
-		buf  []byte               // Wire encoding
-		pver uint32               // Protocol version for wire encoding
+		in   *MsgMerkleBlock // Message to encode
+		out  *MsgMerkleBlock // Expected decoded message
+		buf  []byte          // Wire encoding
+		pver uint32          // Protocol version for wire encoding
+		enc  MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version.
 		{
 			&merkleBlockOne, &merkleBlockOne, merkleBlockOneBytes,
-			wire.ProtocolVersion,
+			ProtocolVersion, BaseEncoding,
 		},
 
 		// Protocol version BIP0037Version.
 		{
 			&merkleBlockOne, &merkleBlockOne, merkleBlockOneBytes,
-			wire.BIP0037Version,
+			BIP0037Version, BaseEncoding,
 		},
 	}
 
@@ -164,7 +170,7 @@ func TestMerkleBlockWire(t *testing.T) {
 	for i, test := range tests {
 		// Encode the message to wire format.
 		var buf bytes.Buffer
-		err := test.in.BtcEncode(&buf, test.pver)
+		err := test.in.BtcEncode(&buf, test.pver, test.enc)
 		if err != nil {
 			t.Errorf("BtcEncode #%d error %v", i, err)
 			continue
@@ -176,9 +182,9 @@ func TestMerkleBlockWire(t *testing.T) {
 		}
 
 		// Decode the message from wire format.
-		var msg wire.MsgMerkleBlock
+		var msg MsgMerkleBlock
 		rbuf := bytes.NewReader(test.buf)
-		err = msg.BtcDecode(rbuf, test.pver)
+		err = msg.BtcDecode(rbuf, test.pver, test.enc)
 		if err != nil {
 			t.Errorf("BtcDecode #%d error %v", i, err)
 			continue
@@ -198,76 +204,77 @@ func TestMerkleBlockWireErrors(t *testing.T) {
 	// because the test data is using bytes encoded with that protocol
 	// version.
 	pver := uint32(70001)
-	pverNoMerkleBlock := wire.BIP0037Version - 1
-	wireErr := &wire.MessageError{}
+	pverNoMerkleBlock := BIP0037Version - 1
+	wireErr := &MessageError{}
 
 	tests := []struct {
-		in       *wire.MsgMerkleBlock // Value to encode
-		buf      []byte               // Wire encoding
-		pver     uint32               // Protocol version for wire encoding
-		max      int                  // Max size of fixed buffer to induce errors
-		writeErr error                // Expected write error
-		readErr  error                // Expected read error
+		in       *MsgMerkleBlock // Value to encode
+		buf      []byte          // Wire encoding
+		pver     uint32          // Protocol version for wire encoding
+		enc      MessageEncoding // Message encoding format
+		max      int             // Max size of fixed buffer to induce errors
+		writeErr error           // Expected write error
+		readErr  error           // Expected read error
 	}{
 		// Force error in version.
 		{
-			&merkleBlockOne, merkleBlockOneBytes, pver, 0,
+			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 0,
 			io.ErrShortWrite, io.EOF,
 		},
 		// Force error in prev block hash.
 		{
-			&merkleBlockOne, merkleBlockOneBytes, pver, 4,
+			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 4,
 			io.ErrShortWrite, io.EOF,
 		},
 		// Force error in merkle root.
 		{
-			&merkleBlockOne, merkleBlockOneBytes, pver, 36,
+			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 36,
 			io.ErrShortWrite, io.EOF,
 		},
 		// Force error in timestamp.
 		{
-			&merkleBlockOne, merkleBlockOneBytes, pver, 68,
+			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 68,
 			io.ErrShortWrite, io.EOF,
 		},
 		// Force error in difficulty bits.
 		{
-			&merkleBlockOne, merkleBlockOneBytes, pver, 72,
+			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 72,
 			io.ErrShortWrite, io.EOF,
 		},
 		// Force error in header nonce.
 		{
-			&merkleBlockOne, merkleBlockOneBytes, pver, 76,
+			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 76,
 			io.ErrShortWrite, io.EOF,
 		},
 		// Force error in transaction count.
 		{
-			&merkleBlockOne, merkleBlockOneBytes, pver, 80,
+			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 80,
 			io.ErrShortWrite, io.EOF,
 		},
 		// Force error in num hashes.
 		{
-			&merkleBlockOne, merkleBlockOneBytes, pver, 84,
+			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 84,
 			io.ErrShortWrite, io.EOF,
 		},
 		// Force error in hashes.
 		{
-			&merkleBlockOne, merkleBlockOneBytes, pver, 85,
+			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 85,
 			io.ErrShortWrite, io.EOF,
 		},
 		// Force error in num flag bytes.
 		{
-			&merkleBlockOne, merkleBlockOneBytes, pver, 117,
+			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 117,
 			io.ErrShortWrite, io.EOF,
 		},
 		// Force error in flag bytes.
 		{
-			&merkleBlockOne, merkleBlockOneBytes, pver, 118,
+			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 118,
 			io.ErrShortWrite, io.EOF,
 		},
 		// Force error due to unsupported protocol version.
 		{
 			&merkleBlockOne, merkleBlockOneBytes, pverNoMerkleBlock,
-			119, wireErr, wireErr,
+			BaseEncoding, 119, wireErr, wireErr,
 		},
 	}
 
@@ -275,16 +282,16 @@ func TestMerkleBlockWireErrors(t *testing.T) {
 	for i, test := range tests {
 		// Encode to wire format.
 		w := newFixedWriter(test.max)
-		err := test.in.BtcEncode(w, test.pver)
+		err := test.in.BtcEncode(w, test.pver, test.enc)
 		if reflect.TypeOf(err) != reflect.TypeOf(test.writeErr) {
 			t.Errorf("BtcEncode #%d wrong error got: %v, want: %v",
 				i, err, test.writeErr)
 			continue
 		}
 
-		// For errors which are not of type wire.MessageError, check
-		// them for equality.
-		if _, ok := err.(*wire.MessageError); !ok {
+		// For errors which are not of type MessageError, check them for
+		// equality.
+		if _, ok := err.(*MessageError); !ok {
 			if err != test.writeErr {
 				t.Errorf("BtcEncode #%d wrong error got: %v, "+
 					"want: %v", i, err, test.writeErr)
@@ -293,18 +300,18 @@ func TestMerkleBlockWireErrors(t *testing.T) {
 		}
 
 		// Decode from wire format.
-		var msg wire.MsgMerkleBlock
+		var msg MsgMerkleBlock
 		r := newFixedReader(test.max, test.buf)
-		err = msg.BtcDecode(r, test.pver)
+		err = msg.BtcDecode(r, test.pver, test.enc)
 		if reflect.TypeOf(err) != reflect.TypeOf(test.readErr) {
 			t.Errorf("BtcDecode #%d wrong error got: %v, want: %v",
 				i, err, test.readErr)
 			continue
 		}
 
-		// For errors which are not of type wire.MessageError, check
-		// them for equality.
-		if _, ok := err.(*wire.MessageError); !ok {
+		// For errors which are not of type MessageError, check them for
+		// equality.
+		if _, ok := err.(*MessageError); !ok {
 			if err != test.readErr {
 				t.Errorf("BtcDecode #%d wrong error got: %v, "+
 					"want: %v", i, err, test.readErr)
@@ -327,7 +334,7 @@ func TestMerkleBlockOverflowErrors(t *testing.T) {
 	// Create bytes for a merkle block that claims to have more than the max
 	// allowed tx hashes.
 	var buf bytes.Buffer
-	wire.TstWriteVarInt(&buf, pver, wire.MaxTxPerBlock+1)
+	WriteVarInt(&buf, pver, maxTxPerBlock+1)
 	numHashesOffset := 84
 	exceedMaxHashes := make([]byte, numHashesOffset)
 	copy(exceedMaxHashes, merkleBlockOneBytes[:numHashesOffset])
@@ -336,29 +343,30 @@ func TestMerkleBlockOverflowErrors(t *testing.T) {
 	// Create bytes for a merkle block that claims to have more than the max
 	// allowed flag bytes.
 	buf.Reset()
-	wire.TstWriteVarInt(&buf, pver, wire.MaxFlagsPerMerkleBlock+1)
+	WriteVarInt(&buf, pver, maxFlagsPerMerkleBlock+1)
 	numFlagBytesOffset := 117
 	exceedMaxFlagBytes := make([]byte, numFlagBytesOffset)
 	copy(exceedMaxFlagBytes, merkleBlockOneBytes[:numFlagBytesOffset])
 	exceedMaxFlagBytes = append(exceedMaxFlagBytes, buf.Bytes()...)
 
 	tests := []struct {
-		buf  []byte // Wire encoding
-		pver uint32 // Protocol version for wire encoding
-		err  error  // Expected error
+		buf  []byte          // Wire encoding
+		pver uint32          // Protocol version for wire encoding
+		enc  MessageEncoding // Message encoding format
+		err  error           // Expected error
 	}{
 		// Block that claims to have more than max allowed hashes.
-		{exceedMaxHashes, pver, &wire.MessageError{}},
+		{exceedMaxHashes, pver, BaseEncoding, &MessageError{}},
 		// Block that claims to have more than max allowed flag bytes.
-		{exceedMaxFlagBytes, pver, &wire.MessageError{}},
+		{exceedMaxFlagBytes, pver, BaseEncoding, &MessageError{}},
 	}
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
 		// Decode from wire format.
-		var msg wire.MsgMerkleBlock
+		var msg MsgMerkleBlock
 		r := bytes.NewReader(test.buf)
-		err := msg.BtcDecode(r, test.pver)
+		err := msg.BtcDecode(r, test.pver, test.enc)
 		if reflect.TypeOf(err) != reflect.TypeOf(test.err) {
 			t.Errorf("BtcDecode #%d wrong error got: %v, want: %v",
 				i, err, reflect.TypeOf(test.err))
@@ -369,16 +377,16 @@ func TestMerkleBlockOverflowErrors(t *testing.T) {
 
 // merkleBlockOne is a merkle block created from block one of the block chain
 // where the first transaction matches.
-var merkleBlockOne = wire.MsgMerkleBlock{
-	Header: wire.BlockHeader{
+var merkleBlockOne = MsgMerkleBlock{
+	Header: BlockHeader{
 		Version: 1,
-		PrevBlock: wire.ShaHash([wire.HashSize]byte{ // Make go vet happy.
+		PrevBlock: chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
 			0x6f, 0xe2, 0x8c, 0x0a, 0xb6, 0xf1, 0xb3, 0x72,
 			0xc1, 0xa6, 0xa2, 0x46, 0xae, 0x63, 0xf7, 0x4f,
 			0x93, 0x1e, 0x83, 0x65, 0xe1, 0x5a, 0x08, 0x9c,
 			0x68, 0xd6, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00,
 		}),
-		MerkleRoot: wire.ShaHash([wire.HashSize]byte{ // Make go vet happy.
+		MerkleRoot: chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
 			0x98, 0x20, 0x51, 0xfd, 0x1e, 0x4b, 0xa7, 0x44,
 			0xbb, 0xbe, 0x68, 0x0e, 0x1f, 0xee, 0x14, 0x67,
 			0x7b, 0xa1, 0xa3, 0xc3, 0x54, 0x0b, 0xf7, 0xb1,
@@ -389,8 +397,8 @@ var merkleBlockOne = wire.MsgMerkleBlock{
 		Nonce:     0x9962e301,               // 2573394689
 	},
 	Transactions: 1,
-	Hashes: []*wire.ShaHash{
-		(*wire.ShaHash)(&[wire.HashSize]byte{ // Make go vet happy.
+	Hashes: []*chainhash.Hash{
+		(*chainhash.Hash)(&[chainhash.HashSize]byte{ // Make go vet happy.
 			0x98, 0x20, 0x51, 0xfd, 0x1e, 0x4b, 0xa7, 0x44,
 			0xbb, 0xbe, 0x68, 0x0e, 0x1f, 0xee, 0x14, 0x67,
 			0x7b, 0xa1, 0xa3, 0xc3, 0x54, 0x0b, 0xf7, 0xb1,
@@ -401,7 +409,7 @@ var merkleBlockOne = wire.MsgMerkleBlock{
 }
 
 // merkleBlockOneBytes is the serialized bytes for a merkle block created from
-// block one of the block chain where the first transation matches.
+// block one of the block chain where the first transaction matches.
 var merkleBlockOneBytes = []byte{
 	0x01, 0x00, 0x00, 0x00, // Version 1
 	0x6f, 0xe2, 0x8c, 0x0a, 0xb6, 0xf1, 0xb3, 0x72,

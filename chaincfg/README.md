@@ -1,11 +1,9 @@
 chaincfg
 ========
 
-[![Build Status](https://travis-ci.org/ppcsuite/ppcd.png?branch=master)]
-(https://travis-ci.org/ppcsuite/ppcd) [![Coverage Status]
-(https://coveralls.io/repos/ppcsuite/ppcd/badge.png?branch=master)]
-(https://coveralls.io/r/ppcsuite/ppcd?branch=master)
-[![tip for next commit](http://peer4commit.com/projects/130.svg)](http://peer4commit.com/projects/130)
+[![Build Status](http://img.shields.io/travis/btcsuite/btcd.svg)](https://travis-ci.org/btcsuite/btcd)
+[![ISC License](http://img.shields.io/badge/license-ISC-blue.svg)](http://copyfree.org)
+[![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/github.com/btcsuite/btcd/chaincfg)
 
 Package chaincfg defines chain configuration parameters for the three standard
 Bitcoin networks and provides the ability for callers to define their own custom

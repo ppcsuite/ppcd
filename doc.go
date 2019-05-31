@@ -1,4 +1,4 @@
-// Copyright (c) 2013-2014 The btcsuite developers
+// Copyright (c) 2013-2017 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -34,8 +34,13 @@ Application Options:
       --listen=             Add an interface/port to listen for connections
                             (default all interfaces port: 8333, testnet: 18333)
       --maxpeers=           Max number of inbound and outbound peers (125)
+      --nobanning           Disable banning of misbehaving peers
       --banduration=        How long to ban misbehaving peers.  Valid time units
                             are {s, m, h}.  Minimum 1 second (24h0m0s)
+      --banthreshold=       Maximum allowed ban score before disconnecting and
+                            banning misbehaving peers.
+      --whitelist=          Add an IP network or IP that will not be banned.
+                            (eg. 192.168.1.0/24 or ::1)
   -u, --rpcuser=            Username for RPC connections
   -P, --rpcpass=            Password for RPC connections
       --rpclimituser=       Username for limited RPC connections
@@ -47,6 +52,9 @@ Application Options:
       --rpcmaxclients=      Max number of RPC clients for standard connections
                             (10)
       --rpcmaxwebsockets=   Max number of RPC websocket connections (25)
+      --rpcquirks           Mirror some JSON-RPC quirks of Bitcoin Core -- NOTE:
+                            Discouraged unless interoperability issues need to
+                            be worked around
       --norpc               Disable built-in RPC server -- NOTE: The RPC server
                             is disabled by default if no rpcuser/rpcpass or
                             rpclimituser/rpclimitpass is specified
@@ -68,10 +76,12 @@ Application Options:
       --testnet             Use the test network
       --regtest             Use the regression test network
       --simnet              Use the simulation test network
+      --addcheckpoint=      Add a custom checkpoint.  Format: '<height>:<hash>'
       --nocheckpoints       Disable built-in checkpoints.  Don't do this unless
                             you know what you're doing.
-      --dbtype=             Database backend to use for the Block Chain
-                            (leveldb)
+      --uacomment=          Comment to add to the user agent --
+                            See BIP 14 for more information.
+      --dbtype=             Database backend to use for the Block Chain (ffldb)
       --profile=            Enable HTTP profiling on given port -- NOTE port
                             must be between 1024 and 65536
       --cpuprofile=         Write CPU profile to the specified file
@@ -89,7 +99,7 @@ Application Options:
       --norelaypriority     Do not require free or low-fee transactions to have
                             high priority for relaying
       --maxorphantx=        Max number of orphan transactions to keep in memory
-                            (1000)
+                            (100)
       --generate            Generate (mine) bitcoins using the CPU
       --miningaddr=         Add the specified payment address to the list of
                             addresses to use for generated blocks -- At least
@@ -101,14 +111,15 @@ Application Options:
                             a block (750000)
       --blockprioritysize=  Size in bytes for high-priority/low-fee transactions
                             when creating a block (50000)
-      --getworkkey=         DEPRECATED -- Use the --miningaddr option instead
-      --addrindex           Build and maintain a full address index. Currently
-                            only supported by leveldb.
-      --dropaddrindex       Deletes the address-based transaction index from the
-                            database on start up, and the exits.
       --nopeerbloomfilters  Disable bloom filtering support.
+      --nocfilters          Disable committed filtering (CF) support.
       --sigcachemaxsize=    The maximum number of entries in the signature
                             verification cache.
+      --blocksonly          Do not accept transactions from remote peers.
+      --relaynonstd         Relay non-standard transactions regardless of the
+                            default settings for the active network.
+      --rejectnonstd        Reject non-standard transactions regardless of the
+                            default settings for the active network.
 
 Help Options:
   -h, --help           Show this help message

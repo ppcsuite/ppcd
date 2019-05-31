@@ -1,8 +1,8 @@
-// Copyright (c) 2013-2015 The btcsuite developers
+// Copyright (c) 2013-2016 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package wire_test
+package wire
 
 import (
 	"bytes"
@@ -11,23 +11,23 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/ppcsuite/ppcd/wire"
+	"github.com/ppcsuite/ppcd/chaincfg/chainhash"
 )
 
 // TestGetHeaders tests the MsgGetHeader API.
 func TestGetHeaders(t *testing.T) {
-	pver := wire.ProtocolVersion
+	pver := ProtocolVersion
 
 	// Block 99500 hash.
 	hashStr := "000000000002e7ad7b9eef9479e4aabc65cb831269cc20d2632c13684406dee0"
-	locatorHash, err := wire.NewShaHashFromStr(hashStr)
+	locatorHash, err := chainhash.NewHashFromStr(hashStr)
 	if err != nil {
-		t.Errorf("NewShaHashFromStr: %v", err)
+		t.Errorf("NewHashFromStr: %v", err)
 	}
 
 	// Ensure the command is expected value.
 	wantCmd := "getheaders"
-	msg := wire.NewMsgGetHeaders()
+	msg := NewMsgGetHeaders()
 	if cmd := msg.Command(); cmd != wantCmd {
 		t.Errorf("NewMsgGetHeaders: wrong command - got %v want %v",
 			cmd, wantCmd)
@@ -58,15 +58,13 @@ func TestGetHeaders(t *testing.T) {
 
 	// Ensure adding more than the max allowed block locator hashes per
 	// message returns an error.
-	for i := 0; i < wire.MaxBlockLocatorsPerMsg; i++ {
+	for i := 0; i < MaxBlockLocatorsPerMsg; i++ {
 		err = msg.AddBlockLocatorHash(locatorHash)
 	}
 	if err == nil {
 		t.Errorf("AddBlockLocatorHash: expected error on too many " +
 			"block locator hashes not received")
 	}
-
-	return
 }
 
 // TestGetHeadersWire tests the MsgGetHeaders wire encode and decode for various
@@ -79,27 +77,27 @@ func TestGetHeadersWire(t *testing.T) {
 
 	// Block 99499 hash.
 	hashStr := "2710f40c87ec93d010a6fd95f42c59a2cbacc60b18cf6b7957535"
-	hashLocator, err := wire.NewShaHashFromStr(hashStr)
+	hashLocator, err := chainhash.NewHashFromStr(hashStr)
 	if err != nil {
-		t.Errorf("NewShaHashFromStr: %v", err)
+		t.Errorf("NewHashFromStr: %v", err)
 	}
 
 	// Block 99500 hash.
 	hashStr = "2e7ad7b9eef9479e4aabc65cb831269cc20d2632c13684406dee0"
-	hashLocator2, err := wire.NewShaHashFromStr(hashStr)
+	hashLocator2, err := chainhash.NewHashFromStr(hashStr)
 	if err != nil {
-		t.Errorf("NewShaHashFromStr: %v", err)
+		t.Errorf("NewHashFromStr: %v", err)
 	}
 
 	// Block 100000 hash.
 	hashStr = "3ba27aa200b1cecaad478d2b00432346c3f1f3986da1afd33e506"
-	hashStop, err := wire.NewShaHashFromStr(hashStr)
+	hashStop, err := chainhash.NewHashFromStr(hashStr)
 	if err != nil {
-		t.Errorf("NewShaHashFromStr: %v", err)
+		t.Errorf("NewHashFromStr: %v", err)
 	}
 
 	// MsgGetHeaders message with no block locators or stop hash.
-	noLocators := wire.NewMsgGetHeaders()
+	noLocators := NewMsgGetHeaders()
 	noLocators.ProtocolVersion = pver
 	noLocatorsEncoded := []byte{
 		0x62, 0xea, 0x00, 0x00, // Protocol version 60002
@@ -111,7 +109,7 @@ func TestGetHeadersWire(t *testing.T) {
 	}
 
 	// MsgGetHeaders message with multiple block locators and a stop hash.
-	multiLocators := wire.NewMsgGetHeaders()
+	multiLocators := NewMsgGetHeaders()
 	multiLocators.ProtocolVersion = pver
 	multiLocators.HashStop = *hashStop
 	multiLocators.AddBlockLocatorHash(hashLocator2)
@@ -134,17 +132,19 @@ func TestGetHeadersWire(t *testing.T) {
 	}
 
 	tests := []struct {
-		in   *wire.MsgGetHeaders // Message to encode
-		out  *wire.MsgGetHeaders // Expected decoded message
-		buf  []byte              // Wire encoding
-		pver uint32              // Protocol version for wire encoding
+		in   *MsgGetHeaders  // Message to encode
+		out  *MsgGetHeaders  // Expected decoded message
+		buf  []byte          // Wire encoding
+		pver uint32          // Protocol version for wire encoding
+		enc  MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version with no block locators.
 		{
 			noLocators,
 			noLocators,
 			noLocatorsEncoded,
-			wire.ProtocolVersion,
+			ProtocolVersion,
+			BaseEncoding,
 		},
 
 		// Latest protocol version with multiple block locators.
@@ -152,7 +152,8 @@ func TestGetHeadersWire(t *testing.T) {
 			multiLocators,
 			multiLocators,
 			multiLocatorsEncoded,
-			wire.ProtocolVersion,
+			ProtocolVersion,
+			BaseEncoding,
 		},
 
 		// Protocol version BIP0035Version with no block locators.
@@ -160,7 +161,8 @@ func TestGetHeadersWire(t *testing.T) {
 			noLocators,
 			noLocators,
 			noLocatorsEncoded,
-			wire.BIP0035Version,
+			BIP0035Version,
+			BaseEncoding,
 		},
 
 		// Protocol version BIP0035Version with multiple block locators.
@@ -168,7 +170,8 @@ func TestGetHeadersWire(t *testing.T) {
 			multiLocators,
 			multiLocators,
 			multiLocatorsEncoded,
-			wire.BIP0035Version,
+			BIP0035Version,
+			BaseEncoding,
 		},
 
 		// Protocol version BIP0031Version with no block locators.
@@ -176,7 +179,8 @@ func TestGetHeadersWire(t *testing.T) {
 			noLocators,
 			noLocators,
 			noLocatorsEncoded,
-			wire.BIP0031Version,
+			BIP0031Version,
+			BaseEncoding,
 		},
 
 		// Protocol version BIP0031Versionwith multiple block locators.
@@ -184,7 +188,8 @@ func TestGetHeadersWire(t *testing.T) {
 			multiLocators,
 			multiLocators,
 			multiLocatorsEncoded,
-			wire.BIP0031Version,
+			BIP0031Version,
+			BaseEncoding,
 		},
 
 		// Protocol version NetAddressTimeVersion with no block locators.
@@ -192,7 +197,8 @@ func TestGetHeadersWire(t *testing.T) {
 			noLocators,
 			noLocators,
 			noLocatorsEncoded,
-			wire.NetAddressTimeVersion,
+			NetAddressTimeVersion,
+			BaseEncoding,
 		},
 
 		// Protocol version NetAddressTimeVersion multiple block locators.
@@ -200,7 +206,8 @@ func TestGetHeadersWire(t *testing.T) {
 			multiLocators,
 			multiLocators,
 			multiLocatorsEncoded,
-			wire.NetAddressTimeVersion,
+			NetAddressTimeVersion,
+			BaseEncoding,
 		},
 
 		// Protocol version MultipleAddressVersion with no block locators.
@@ -208,7 +215,8 @@ func TestGetHeadersWire(t *testing.T) {
 			noLocators,
 			noLocators,
 			noLocatorsEncoded,
-			wire.MultipleAddressVersion,
+			MultipleAddressVersion,
+			BaseEncoding,
 		},
 
 		// Protocol version MultipleAddressVersion multiple block locators.
@@ -216,7 +224,8 @@ func TestGetHeadersWire(t *testing.T) {
 			multiLocators,
 			multiLocators,
 			multiLocatorsEncoded,
-			wire.MultipleAddressVersion,
+			MultipleAddressVersion,
+			BaseEncoding,
 		},
 	}
 
@@ -224,7 +233,7 @@ func TestGetHeadersWire(t *testing.T) {
 	for i, test := range tests {
 		// Encode the message to wire format.
 		var buf bytes.Buffer
-		err := test.in.BtcEncode(&buf, test.pver)
+		err := test.in.BtcEncode(&buf, test.pver, test.enc)
 		if err != nil {
 			t.Errorf("BtcEncode #%d error %v", i, err)
 			continue
@@ -236,9 +245,9 @@ func TestGetHeadersWire(t *testing.T) {
 		}
 
 		// Decode the message from wire format.
-		var msg wire.MsgGetHeaders
+		var msg MsgGetHeaders
 		rbuf := bytes.NewReader(test.buf)
-		err = msg.BtcDecode(rbuf, test.pver)
+		err = msg.BtcDecode(rbuf, test.pver, test.enc)
 		if err != nil {
 			t.Errorf("BtcDecode #%d error %v", i, err)
 			continue
@@ -258,31 +267,31 @@ func TestGetHeadersWireErrors(t *testing.T) {
 	// specifically here instead of the latest because the test data is
 	// using bytes encoded with that protocol version.
 	pver := uint32(60002)
-	wireErr := &wire.MessageError{}
+	wireErr := &MessageError{}
 
 	// Block 99499 hash.
 	hashStr := "2710f40c87ec93d010a6fd95f42c59a2cbacc60b18cf6b7957535"
-	hashLocator, err := wire.NewShaHashFromStr(hashStr)
+	hashLocator, err := chainhash.NewHashFromStr(hashStr)
 	if err != nil {
-		t.Errorf("NewShaHashFromStr: %v", err)
+		t.Errorf("NewHashFromStr: %v", err)
 	}
 
 	// Block 99500 hash.
 	hashStr = "2e7ad7b9eef9479e4aabc65cb831269cc20d2632c13684406dee0"
-	hashLocator2, err := wire.NewShaHashFromStr(hashStr)
+	hashLocator2, err := chainhash.NewHashFromStr(hashStr)
 	if err != nil {
-		t.Errorf("NewShaHashFromStr: %v", err)
+		t.Errorf("NewHashFromStr: %v", err)
 	}
 
 	// Block 100000 hash.
 	hashStr = "3ba27aa200b1cecaad478d2b00432346c3f1f3986da1afd33e506"
-	hashStop, err := wire.NewShaHashFromStr(hashStr)
+	hashStop, err := chainhash.NewHashFromStr(hashStr)
 	if err != nil {
-		t.Errorf("NewShaHashFromStr: %v", err)
+		t.Errorf("NewHashFromStr: %v", err)
 	}
 
 	// MsgGetHeaders message with multiple block locators and a stop hash.
-	baseGetHeaders := wire.NewMsgGetHeaders()
+	baseGetHeaders := NewMsgGetHeaders()
 	baseGetHeaders.ProtocolVersion = pver
 	baseGetHeaders.HashStop = *hashStop
 	baseGetHeaders.AddBlockLocatorHash(hashLocator2)
@@ -306,8 +315,8 @@ func TestGetHeadersWireErrors(t *testing.T) {
 
 	// Message that forces an error by having more than the max allowed
 	// block locator hashes.
-	maxGetHeaders := wire.NewMsgGetHeaders()
-	for i := 0; i < wire.MaxBlockLocatorsPerMsg; i++ {
+	maxGetHeaders := NewMsgGetHeaders()
+	for i := 0; i < MaxBlockLocatorsPerMsg; i++ {
 		maxGetHeaders.AddBlockLocatorHash(&mainNetGenesisHash)
 	}
 	maxGetHeaders.BlockLocatorHashes = append(maxGetHeaders.BlockLocatorHashes,
@@ -318,39 +327,40 @@ func TestGetHeadersWireErrors(t *testing.T) {
 	}
 
 	tests := []struct {
-		in       *wire.MsgGetHeaders // Value to encode
-		buf      []byte              // Wire encoding
-		pver     uint32              // Protocol version for wire encoding
-		max      int                 // Max size of fixed buffer to induce errors
-		writeErr error               // Expected write error
-		readErr  error               // Expected read error
+		in       *MsgGetHeaders  // Value to encode
+		buf      []byte          // Wire encoding
+		pver     uint32          // Protocol version for wire encoding
+		enc      MessageEncoding // Message encoding format
+		max      int             // Max size of fixed buffer to induce errors
+		writeErr error           // Expected write error
+		readErr  error           // Expected read error
 	}{
 		// Force error in protocol version.
-		{baseGetHeaders, baseGetHeadersEncoded, pver, 0, io.ErrShortWrite, io.EOF},
+		{baseGetHeaders, baseGetHeadersEncoded, pver, BaseEncoding, 0, io.ErrShortWrite, io.EOF},
 		// Force error in block locator hash count.
-		{baseGetHeaders, baseGetHeadersEncoded, pver, 4, io.ErrShortWrite, io.EOF},
+		{baseGetHeaders, baseGetHeadersEncoded, pver, BaseEncoding, 4, io.ErrShortWrite, io.EOF},
 		// Force error in block locator hashes.
-		{baseGetHeaders, baseGetHeadersEncoded, pver, 5, io.ErrShortWrite, io.EOF},
+		{baseGetHeaders, baseGetHeadersEncoded, pver, BaseEncoding, 5, io.ErrShortWrite, io.EOF},
 		// Force error in stop hash.
-		{baseGetHeaders, baseGetHeadersEncoded, pver, 69, io.ErrShortWrite, io.EOF},
+		{baseGetHeaders, baseGetHeadersEncoded, pver, BaseEncoding, 69, io.ErrShortWrite, io.EOF},
 		// Force error with greater than max block locator hashes.
-		{maxGetHeaders, maxGetHeadersEncoded, pver, 7, wireErr, wireErr},
+		{maxGetHeaders, maxGetHeadersEncoded, pver, BaseEncoding, 7, wireErr, wireErr},
 	}
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
 		// Encode to wire format.
 		w := newFixedWriter(test.max)
-		err := test.in.BtcEncode(w, test.pver)
+		err := test.in.BtcEncode(w, test.pver, test.enc)
 		if reflect.TypeOf(err) != reflect.TypeOf(test.writeErr) {
 			t.Errorf("BtcEncode #%d wrong error got: %v, want: %v",
 				i, err, test.writeErr)
 			continue
 		}
 
-		// For errors which are not of type wire.MessageError, check
-		// them for equality.
-		if _, ok := err.(*wire.MessageError); !ok {
+		// For errors which are not of type MessageError, check them for
+		// equality.
+		if _, ok := err.(*MessageError); !ok {
 			if err != test.writeErr {
 				t.Errorf("BtcEncode #%d wrong error got: %v, "+
 					"want: %v", i, err, test.writeErr)
@@ -359,18 +369,18 @@ func TestGetHeadersWireErrors(t *testing.T) {
 		}
 
 		// Decode from wire format.
-		var msg wire.MsgGetHeaders
+		var msg MsgGetHeaders
 		r := newFixedReader(test.max, test.buf)
-		err = msg.BtcDecode(r, test.pver)
+		err = msg.BtcDecode(r, test.pver, test.enc)
 		if reflect.TypeOf(err) != reflect.TypeOf(test.readErr) {
 			t.Errorf("BtcDecode #%d wrong error got: %v, want: %v",
 				i, err, test.readErr)
 			continue
 		}
 
-		// For errors which are not of type wire.MessageError, check
-		// them for equality.
-		if _, ok := err.(*wire.MessageError); !ok {
+		// For errors which are not of type MessageError, check them for
+		// equality.
+		if _, ok := err.(*MessageError); !ok {
 			if err != test.readErr {
 				t.Errorf("BtcDecode #%d wrong error got: %v, "+
 					"want: %v", i, err, test.readErr)

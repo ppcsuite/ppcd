@@ -1,15 +1,13 @@
-// Copyright (c) 2013-2014 The btcsuite developers
-// Copyright (c) 2013-2014 Dave Collins
+// Copyright (c) 2013-2016 The btcsuite developers
+// Copyright (c) 2013-2016 Dave Collins
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package btcec_test
+package btcec
 
 import (
 	"reflect"
 	"testing"
-
-	"github.com/ppcsuite/ppcd/btcec"
 )
 
 // TestSetInt ensures that setting a field value to various native integers
@@ -30,11 +28,10 @@ func TestSetInt(t *testing.T) {
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
-		f := btcec.NewFieldVal().SetInt(test.in)
-		result := f.TstRawInts()
-		if !reflect.DeepEqual(result, test.raw) {
+		f := new(fieldVal).SetInt(test.in)
+		if !reflect.DeepEqual(f.n, test.raw) {
 			t.Errorf("fieldVal.Set #%d wrong result\ngot: %v\n"+
-				"want: %v", i, result, test.raw)
+				"want: %v", i, f.n, test.raw)
 			continue
 		}
 	}
@@ -42,9 +39,9 @@ func TestSetInt(t *testing.T) {
 
 // TestZero ensures that zeroing a field value zero works as expected.
 func TestZero(t *testing.T) {
-	f := btcec.NewFieldVal().SetInt(2)
+	f := new(fieldVal).SetInt(2)
 	f.Zero()
-	for idx, rawInt := range f.TstRawInts() {
+	for idx, rawInt := range f.n {
 		if rawInt != 0 {
 			t.Errorf("internal field integer at index #%d is not "+
 				"zero - got %d", idx, rawInt)
@@ -54,22 +51,22 @@ func TestZero(t *testing.T) {
 
 // TestIsZero ensures that checking if a field IsZero works as expected.
 func TestIsZero(t *testing.T) {
-	f := btcec.NewFieldVal()
+	f := new(fieldVal)
 	if !f.IsZero() {
 		t.Errorf("new field value is not zero - got %v (rawints %x)", f,
-			f.TstRawInts())
+			f.n)
 	}
 
 	f.SetInt(1)
 	if f.IsZero() {
 		t.Errorf("field claims it's zero when it's not - got %v "+
-			"(raw rawints %x)", f, f.TstRawInts())
+			"(raw rawints %x)", f, f.n)
 	}
 
 	f.Zero()
 	if !f.IsZero() {
 		t.Errorf("field claims it's not zero when it is - got %v "+
-			"(raw rawints %x)", f, f.TstRawInts())
+			"(raw rawints %x)", f, f.n)
 	}
 }
 
@@ -147,7 +144,7 @@ func TestStringer(t *testing.T) {
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
-		f := btcec.NewFieldVal().SetHex(test.in)
+		f := new(fieldVal).SetHex(test.in)
 		result := f.String()
 		if result != test.expected {
 			t.Errorf("fieldVal.String #%d wrong result\ngot: %v\n"+
@@ -233,20 +230,93 @@ func TestNormalize(t *testing.T) {
 			[10]uint32{0xfffffc2f, 0xffffff80, 0xffffffc0, 0xffffffc0, 0xffffffc0, 0xffffffc0, 0xffffffc0, 0xffffffc0, 0xffffffc0, 0x3fffc0},
 			[10]uint32{0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x000000},
 		},
+		// Prime larger than P where both first and second words are larger
+		// than P's first and second words
+		{
+			[10]uint32{0xfffffc30, 0xffffff86, 0xffffffc0, 0xffffffc0, 0xffffffc0, 0xffffffc0, 0xffffffc0, 0xffffffc0, 0xffffffc0, 0x3fffc0},
+			[10]uint32{0x00000001, 0x00000006, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x000000},
+		},
+		// Prime larger than P where only the second word is larger
+		// than P's second words.
+		{
+			[10]uint32{0xfffffc2a, 0xffffff87, 0xffffffc0, 0xffffffc0, 0xffffffc0, 0xffffffc0, 0xffffffc0, 0xffffffc0, 0xffffffc0, 0x3fffc0},
+			[10]uint32{0x03fffffb, 0x00000006, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x000000},
+		},
 		// 2^256 - 1
 		{
 			[10]uint32{0xffffffff, 0xffffffc0, 0xffffffc0, 0xffffffc0, 0xffffffc0, 0xffffffc0, 0xffffffc0, 0xffffffc0, 0xffffffc0, 0x3fffc0},
 			[10]uint32{0x000003d0, 0x00000040, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x000000},
 		},
+		// Prime with field representation such that the initial
+		// reduction does not result in a carry to bit 256.
+		//
+		// 2^256 - 4294968273 (secp256k1 prime)
+		{
+			[10]uint32{0x03fffc2f, 0x03ffffbf, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x003fffff},
+			[10]uint32{0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000},
+		},
+		// Prime larger than P that reduces to a value which is still
+		// larger than P when it has a magnitude of 1 due to its first
+		// word and does not result in a carry to bit 256.
+		//
+		// 2^256 - 4294968272 (secp256k1 prime + 1)
+		{
+			[10]uint32{0x03fffc30, 0x03ffffbf, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x003fffff},
+			[10]uint32{0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000},
+		},
+		// Prime larger than P that reduces to a value which is still
+		// larger than P when it has a magnitude of 1 due to its second
+		// word and does not result in a carry to bit 256.
+		//
+		// 2^256 - 4227859409 (secp256k1 prime + 0x4000000)
+		{
+			[10]uint32{0x03fffc2f, 0x03ffffc0, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x003fffff},
+			[10]uint32{0x00000000, 0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000},
+		},
+		// Prime larger than P that reduces to a value which is still
+		// larger than P when it has a magnitude of 1 due to a carry to
+		// bit 256, but would not be without the carry.  These values
+		// come from the fact that P is 2^256 - 4294968273 and 977 is
+		// the low order word in the internal field representation.
+		//
+		// 2^256 * 5 - ((4294968273 - (977+1)) * 4)
+		{
+			[10]uint32{0x03ffffff, 0x03fffeff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x0013fffff},
+			[10]uint32{0x00001314, 0x00000040, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x000000000},
+		},
+		// Prime larger than P that reduces to a value which is still
+		// larger than P when it has a magnitude of 1 due to both a
+		// carry to bit 256 and the first word.
+		{
+			[10]uint32{0x03fffc30, 0x03ffffbf, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x07ffffff, 0x003fffff},
+			[10]uint32{0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000001},
+		},
+		// Prime larger than P that reduces to a value which is still
+		// larger than P when it has a magnitude of 1 due to both a
+		// carry to bit 256 and the second word.
+		//
+		{
+			[10]uint32{0x03fffc2f, 0x03ffffc0, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x3ffffff, 0x07ffffff, 0x003fffff},
+			[10]uint32{0x00000000, 0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x0000000, 0x00000000, 0x00000001},
+		},
+		// Prime larger than P that reduces to a value which is still
+		// larger than P when it has a magnitude of 1 due to a carry to
+		// bit 256 and the first and second words.
+		//
+		{
+			[10]uint32{0x03fffc30, 0x03ffffc0, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x03ffffff, 0x07ffffff, 0x003fffff},
+			[10]uint32{0x00000001, 0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000001},
+		},
 	}
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
-		f := btcec.NewFieldVal().TstSetRawInts(test.raw).Normalize()
-		result := f.TstRawInts()
-		if !reflect.DeepEqual(result, test.normalized) {
-			t.Errorf("fieldVal.Set #%d wrong normalized result\n"+
-				"got: %x\nwant: %x", i, result, test.normalized)
+		f := new(fieldVal)
+		f.n = test.raw
+		f.Normalize()
+		if !reflect.DeepEqual(f.n, test.normalized) {
+			t.Errorf("fieldVal.Normalize #%d wrong result\n"+
+				"got: %x\nwant: %x", i, f.n, test.normalized)
 			continue
 		}
 	}
@@ -271,7 +341,7 @@ func TestIsOdd(t *testing.T) {
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
-		f := btcec.NewFieldVal().SetHex(test.in)
+		f := new(fieldVal).SetHex(test.in)
 		result := f.IsOdd()
 		if result != test.expected {
 			t.Errorf("fieldVal.IsOdd #%d wrong result\n"+
@@ -304,8 +374,8 @@ func TestEquals(t *testing.T) {
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
-		f := btcec.NewFieldVal().SetHex(test.in1).Normalize()
-		f2 := btcec.NewFieldVal().SetHex(test.in2).Normalize()
+		f := new(fieldVal).SetHex(test.in1).Normalize()
+		f2 := new(fieldVal).SetHex(test.in2).Normalize()
 		result := f.Equals(f2)
 		if result != test.expected {
 			t.Errorf("fieldVal.Equals #%d wrong result\n"+
@@ -352,8 +422,8 @@ func TestNegate(t *testing.T) {
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
-		f := btcec.NewFieldVal().SetHex(test.in).Normalize()
-		expected := btcec.NewFieldVal().SetHex(test.expected).Normalize()
+		f := new(fieldVal).SetHex(test.in).Normalize()
+		expected := new(fieldVal).SetHex(test.expected).Normalize()
 		result := f.Negate(1).Normalize()
 		if !result.Equals(expected) {
 			t.Errorf("fieldVal.Negate #%d wrong result\n"+
@@ -403,8 +473,8 @@ func TestAddInt(t *testing.T) {
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
-		f := btcec.NewFieldVal().SetHex(test.in1).Normalize()
-		expected := btcec.NewFieldVal().SetHex(test.expected).Normalize()
+		f := new(fieldVal).SetHex(test.in1).Normalize()
+		expected := new(fieldVal).SetHex(test.expected).Normalize()
 		result := f.AddInt(test.in2).Normalize()
 		if !result.Equals(expected) {
 			t.Errorf("fieldVal.AddInt #%d wrong result\n"+
@@ -454,9 +524,9 @@ func TestAdd(t *testing.T) {
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
-		f := btcec.NewFieldVal().SetHex(test.in1).Normalize()
-		f2 := btcec.NewFieldVal().SetHex(test.in2).Normalize()
-		expected := btcec.NewFieldVal().SetHex(test.expected).Normalize()
+		f := new(fieldVal).SetHex(test.in1).Normalize()
+		f2 := new(fieldVal).SetHex(test.in2).Normalize()
+		expected := new(fieldVal).SetHex(test.expected).Normalize()
 		result := f.Add(f2).Normalize()
 		if !result.Equals(expected) {
 			t.Errorf("fieldVal.Add #%d wrong result\n"+
@@ -481,6 +551,8 @@ func TestAdd2(t *testing.T) {
 		{"fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e", "1", "0"},
 		// secp256k1 prime + 1
 		{"fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f", "1", "1"},
+		// close but over the secp256k1 prime
+		{"fffffffffffffffffffffffffffffffffffffffffffffffffffffff000000000", "f1ffff000", "1ffff3d1"},
 		// Random samples.
 		{
 			"ad82b8d1cc136e23e9fd77fe2c7db1fe5a2ecbfcbde59ab3529758334f862d28",
@@ -506,9 +578,9 @@ func TestAdd2(t *testing.T) {
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
-		f := btcec.NewFieldVal().SetHex(test.in1).Normalize()
-		f2 := btcec.NewFieldVal().SetHex(test.in2).Normalize()
-		expected := btcec.NewFieldVal().SetHex(test.expected).Normalize()
+		f := new(fieldVal).SetHex(test.in1).Normalize()
+		f2 := new(fieldVal).SetHex(test.in2).Normalize()
+		expected := new(fieldVal).SetHex(test.expected).Normalize()
 		result := f.Add2(f, f2).Normalize()
 		if !result.Equals(expected) {
 			t.Errorf("fieldVal.Add2 #%d wrong result\n"+
@@ -571,8 +643,8 @@ func TestMulInt(t *testing.T) {
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
-		f := btcec.NewFieldVal().SetHex(test.in1).Normalize()
-		expected := btcec.NewFieldVal().SetHex(test.expected).Normalize()
+		f := new(fieldVal).SetHex(test.in1).Normalize()
+		expected := new(fieldVal).SetHex(test.expected).Normalize()
 		result := f.MulInt(test.in2).Normalize()
 		if !result.Equals(expected) {
 			t.Errorf("fieldVal.MulInt #%d wrong result\n"+
@@ -593,6 +665,12 @@ func TestMul(t *testing.T) {
 		{"1", "0", "0"},
 		{"0", "1", "0"},
 		{"1", "1", "1"},
+		// slightly over prime
+		{
+			"ffffffffffffffffffffffffffffffffffffffffffffffffffffffff1ffff",
+			"1000",
+			"1ffff3d1",
+		},
 		// secp256k1 prime-1 * 2
 		{
 			"fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e",
@@ -632,9 +710,9 @@ func TestMul(t *testing.T) {
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
-		f := btcec.NewFieldVal().SetHex(test.in1).Normalize()
-		f2 := btcec.NewFieldVal().SetHex(test.in2).Normalize()
-		expected := btcec.NewFieldVal().SetHex(test.expected).Normalize()
+		f := new(fieldVal).SetHex(test.in1).Normalize()
+		f2 := new(fieldVal).SetHex(test.in2).Normalize()
+		expected := new(fieldVal).SetHex(test.expected).Normalize()
 		result := f.Mul(f2).Normalize()
 		if !result.Equals(expected) {
 			t.Errorf("fieldVal.Mul #%d wrong result\n"+
@@ -679,8 +757,8 @@ func TestSquare(t *testing.T) {
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
-		f := btcec.NewFieldVal().SetHex(test.in).Normalize()
-		expected := btcec.NewFieldVal().SetHex(test.expected).Normalize()
+		f := new(fieldVal).SetHex(test.in).Normalize()
+		expected := new(fieldVal).SetHex(test.expected).Normalize()
 		result := f.Square().Normalize()
 		if !result.Equals(expected) {
 			t.Errorf("fieldVal.Square #%d wrong result\n"+
@@ -732,8 +810,8 @@ func TestInverse(t *testing.T) {
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
-		f := btcec.NewFieldVal().SetHex(test.in).Normalize()
-		expected := btcec.NewFieldVal().SetHex(test.expected).Normalize()
+		f := new(fieldVal).SetHex(test.in).Normalize()
+		expected := new(fieldVal).SetHex(test.expected).Normalize()
 		result := f.Inverse().Normalize()
 		if !result.Equals(expected) {
 			t.Errorf("fieldVal.Inverse #%d wrong result\n"+

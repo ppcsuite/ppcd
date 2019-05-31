@@ -1,4 +1,4 @@
-// Copyright (c) 2013-2015 The btcsuite developers
+// Copyright (c) 2013-2017 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -11,18 +11,14 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ppcsuite/btcutil"
 	"github.com/ppcsuite/ppcd/chaincfg"
-	"github.com/ppcsuite/ppcd/database"
+	"github.com/ppcsuite/ppcd/chaincfg/chainhash"
 	"github.com/ppcsuite/ppcd/txscript"
 	"github.com/ppcsuite/ppcd/wire"
+	"github.com/ppcsuite/ppcutil"
 )
 
 const (
-	// MaxSigOpsPerBlock is the maximum number of signature operations
-	// allowed for a block.  It is a fraction of the max block payload size.
-	MaxSigOpsPerBlock = wire.MaxBlockPayload / 50
-
 	// MaxTimeOffsetSeconds is the maximum number of seconds a block time
 	// is allowed to be ahead of the current time.  This is currently 2
 	// hours.
@@ -48,31 +44,26 @@ const (
 )
 
 var (
-	// coinbaseMaturity is the internal variable used for validating the
-	// spending of coinbase outputs.  A variable rather than the exported
-	// constant is used because the tests need the ability to modify it.
-	coinbaseMaturity = int32(CoinbaseMaturity)
-
-	// zeroHash is the zero value for a wire.ShaHash and is defined as
+	// zeroHash is the zero value for a chainhash.Hash and is defined as
 	// a package level variable to avoid the need to create a new instance
 	// every time a check is needed.
-	zeroHash = &wire.ShaHash{}
+	zeroHash chainhash.Hash
 
 	// block91842Hash is one of the two nodes which violate the rules
 	// set forth in BIP0030.  It is defined as a package level variable to
 	// avoid the need to create a new instance every time a check is needed.
-	block91842Hash = newShaHashFromStr("00000000000a4d0a398161ffc163c503763b1f4360639393e0e4c8e300e0caec")
+	block91842Hash = newHashFromStr("00000000000a4d0a398161ffc163c503763b1f4360639393e0e4c8e300e0caec")
 
 	// block91880Hash is one of the two nodes which violate the rules
 	// set forth in BIP0030.  It is defined as a package level variable to
 	// avoid the need to create a new instance every time a check is needed.
-	block91880Hash = newShaHashFromStr("00000000000743f190a18c5577a3c2d2a1f610ae9601ac046a38084ccb7cd721")
+	block91880Hash = newHashFromStr("00000000000743f190a18c5577a3c2d2a1f610ae9601ac046a38084ccb7cd721")
 )
 
 // isNullOutpoint determines whether or not a previous transaction output point
 // is set.
 func isNullOutpoint(outpoint *wire.OutPoint) bool {
-	if outpoint.Index == math.MaxUint32 && outpoint.Hash.IsEqual(zeroHash) {
+	if outpoint.Index == math.MaxUint32 && outpoint.Hash == zeroHash {
 		return true
 	}
 	return false
@@ -104,7 +95,7 @@ func IsCoinBaseTx(msgTx *wire.MsgTx) bool {
 	// The previous output of a coin base must have a max value index and
 	// a zero hash.
 	prevOut := &msgTx.TxIn[0].PreviousOutPoint
-	if prevOut.Index != math.MaxUint32 || !prevOut.Hash.IsEqual(zeroHash) {
+	if prevOut.Index != math.MaxUint32 || prevOut.Hash != zeroHash {
 		return false
 	}
 
@@ -121,6 +112,23 @@ func IsCoinBaseTx(msgTx *wire.MsgTx) bool {
 // level util transaction as opposed to a raw wire transaction.
 func IsCoinBase(tx *btcutil.Tx) bool {
 	return IsCoinBaseTx(tx.MsgTx())
+}
+
+// SequenceLockActive determines if a transaction's sequence locks have been
+// met, meaning that all the inputs of a given transaction have reached a
+// height or time sufficient for their relative lock-time maturity.
+func SequenceLockActive(sequenceLock *SequenceLock, blockHeight int32,
+	medianTimePast time.Time) bool {
+
+	// If either the seconds, or height relative-lock time has not yet
+	// reached, then the transaction is not yet mature according to its
+	// sequence locks.
+	if sequenceLock.Seconds >= medianTimePast.Unix() ||
+		sequenceLock.BlockHeight >= blockHeight {
+		return false
+	}
+
+	return true
 }
 
 // IsFinalizedTransaction determines whether or not a transaction is finalized.
@@ -147,7 +155,7 @@ func IsFinalizedTransaction(tx *btcutil.Tx, blockHeight int32, blockTime time.Ti
 		return true
 	}
 
-	// At this point, the transaction's lock time hasn't occured yet, but
+	// At this point, the transaction's lock time hasn't occurred yet, but
 	// the transaction might still be finalized if the sequence number
 	// for all transaction inputs is maxed out.
 	for _, txIn := range msgTx.TxIn {
@@ -178,18 +186,18 @@ func isBIP0030Node(node *blockNode) bool {
 // newly generated blocks awards as well as validating the coinbase for blocks
 // has the expected value.
 //
-// The subsidy is halved every SubsidyHalvingInterval blocks.  Mathematically
-// this is: baseSubsidy / 2^(height/subsidyHalvingInterval)
+// The subsidy is halved every SubsidyReductionInterval blocks.  Mathematically
+// this is: baseSubsidy / 2^(height/SubsidyReductionInterval)
 //
 // At the target block generation rate for the main network, this is
 // approximately every 4 years.
 func CalcBlockSubsidy(height int32, chainParams *chaincfg.Params) int64 {
-	if chainParams.SubsidyHalvingInterval == 0 {
+	if chainParams.SubsidyReductionInterval == 0 {
 		return baseSubsidy
 	}
 
 	// Equivalent to: baseSubsidy / 2^(height/subsidyHalvingInterval)
-	return baseSubsidy >> uint(height/chainParams.SubsidyHalvingInterval)
+	return baseSubsidy >> uint(height/chainParams.SubsidyReductionInterval)
 }
 
 // CheckTransactionSanity performs some preliminary checks on a transaction to
@@ -211,10 +219,10 @@ func CheckTransactionSanity(tx *btcutil.Tx) error {
 
 	// A transaction must not exceed the maximum allowed block payload when
 	// serialized.
-	serializedTxSize := tx.MsgTx().SerializeSize()
-	if serializedTxSize > wire.MaxBlockPayload {
+	serializedTxSize := tx.MsgTx().SerializeSizeStripped()
+	if serializedTxSize > MaxBlockBaseSize {
 		str := fmt.Sprintf("serialized transaction is too big - got "+
-			"%d, max %d", serializedTxSize, wire.MaxBlockPayload)
+			"%d, max %d", serializedTxSize, MaxBlockBaseSize)
 		return ruleError(ErrTxTooBig, str)
 	}
 
@@ -281,8 +289,7 @@ func CheckTransactionSanity(tx *btcutil.Tx) error {
 		// Previous transaction outputs referenced by the inputs to this
 		// transaction must not be null.
 		for _, txIn := range msgTx.TxIn {
-			prevOut := &txIn.PreviousOutPoint
-			if isNullOutpoint(prevOut) {
+			if isNullOutpoint(&txIn.PreviousOutPoint) {
 				return ruleError(ErrBadTxInput, "transaction "+
 					"input refers to previous output that "+
 					"is null")
@@ -324,8 +331,8 @@ func checkProofOfWork(header *wire.BlockHeader, powLimit *big.Int, flags Behavio
 	// to avoid proof of work checks is set.
 	if flags&BFNoPoWCheck != BFNoPoWCheck {
 		// The block hash must be less than the claimed target.
-		hash := header.BlockSha()
-		hashNum := ShaHashToBig(&hash)
+		hash := header.BlockHash()
+		hashNum := HashToBig(&hash)
 		if hashNum.Cmp(target) > 0 {
 			str := fmt.Sprintf("block hash of %v is higher than "+
 				"expected max of %v", hashNum, target)
@@ -372,7 +379,7 @@ func CountSigOps(tx *btcutil.Tx) int {
 // transactions which are of the pay-to-script-hash type.  This uses the
 // precise, signature operation counting mechanism from the script engine which
 // requires access to the input transaction scripts.
-func CountP2SHSigOps(tx *btcutil.Tx, isCoinBaseTx bool, txStore TxStore) (int, error) {
+func CountP2SHSigOps(tx *btcutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint) (int, error) {
 	// Coinbase transactions have no interesting inputs.
 	if isCoinBaseTx {
 		return 0, nil
@@ -382,31 +389,20 @@ func CountP2SHSigOps(tx *btcutil.Tx, isCoinBaseTx bool, txStore TxStore) (int, e
 	// inputs.
 	msgTx := tx.MsgTx()
 	totalSigOps := 0
-	for _, txIn := range msgTx.TxIn {
+	for txInIndex, txIn := range msgTx.TxIn {
 		// Ensure the referenced input transaction is available.
-		txInHash := &txIn.PreviousOutPoint.Hash
-		originTx, exists := txStore[*txInHash]
-		if !exists || originTx.Err != nil || originTx.Tx == nil {
-			str := fmt.Sprintf("unable to find input transaction "+
-				"%v referenced from transaction %v", txInHash,
-				tx.Sha())
-			return 0, ruleError(ErrMissingTx, str)
-		}
-		originMsgTx := originTx.Tx.MsgTx()
-
-		// Ensure the output index in the referenced transaction is
-		// available.
-		originTxIndex := txIn.PreviousOutPoint.Index
-		if originTxIndex >= uint32(len(originMsgTx.TxOut)) {
-			str := fmt.Sprintf("out of bounds input index %d in "+
-				"transaction %v referenced from transaction %v",
-				originTxIndex, txInHash, tx.Sha())
-			return 0, ruleError(ErrBadTxInput, str)
+		utxo := utxoView.LookupEntry(txIn.PreviousOutPoint)
+		if utxo == nil || utxo.IsSpent() {
+			str := fmt.Sprintf("output %v referenced from "+
+				"transaction %s:%d either does not exist or "+
+				"has already been spent", txIn.PreviousOutPoint,
+				tx.Hash(), txInIndex)
+			return 0, ruleError(ErrMissingTxOut, str)
 		}
 
 		// We're only interested in pay-to-script-hash types, so skip
 		// this input if it's not one.
-		pkScript := originMsgTx.TxOut[originTxIndex].PkScript
+		pkScript := utxo.PkScript()
 		if !txscript.IsPayToScriptHash(pkScript) {
 			continue
 		}
@@ -422,10 +418,9 @@ func CountP2SHSigOps(tx *btcutil.Tx, isCoinBaseTx bool, txStore TxStore) (int, e
 		lastSigOps := totalSigOps
 		totalSigOps += numSigOps
 		if totalSigOps < lastSigOps {
-			str := fmt.Sprintf("the public key script from "+
-				"output index %d in transaction %v contains "+
-				"too many signature operations - overflow",
-				originTxIndex, txInHash)
+			str := fmt.Sprintf("the public key script from output "+
+				"%v contains too many signature operations - "+
+				"overflow", txIn.PreviousOutPoint)
 			return 0, ruleError(ErrTooManySigOps, str)
 		}
 	}
@@ -487,19 +482,20 @@ func checkBlockSanity(params *chaincfg.Params, block *btcutil.Block, powLimit *b
 			"any transactions")
 	}
 
-	// A block must not have more transactions than the max block payload.
-	if numTx > wire.MaxBlockPayload {
+	// A block must not have more transactions than the max block payload or
+	// else it is certainly over the weight limit.
+	if numTx > MaxBlockBaseSize {
 		str := fmt.Sprintf("block contains too many transactions - "+
-			"got %d, max %d", numTx, wire.MaxBlockPayload)
-		return ruleError(ErrTooManyTransactions, str)
+			"got %d, max %d", numTx, MaxBlockBaseSize)
+		return ruleError(ErrBlockTooBig, str)
 	}
 
 	// A block must not exceed the maximum allowed block payload when
 	// serialized.
-	serializedSize := msgBlock.SerializeSize()
-	if serializedSize > wire.MaxBlockPayload {
+	serializedSize := msgBlock.SerializeSizeStripped()
+	if serializedSize > MaxBlockBaseSize {
 		str := fmt.Sprintf("serialized block is too big - got %d, "+
-			"max %d", serializedSize, wire.MaxBlockPayload)
+			"max %d", serializedSize, MaxBlockBaseSize)
 		return ruleError(ErrBlockTooBig, str)
 	}
 
@@ -523,7 +519,7 @@ func checkBlockSanity(params *chaincfg.Params, block *btcutil.Block, powLimit *b
 	for i, tx := range transactions[1:] {
 		if IsCoinBase(tx) {
 			str := fmt.Sprintf("block contains second coinbase at "+
-				"index %d", i)
+				"index %d", i+1)
 			return ruleError(ErrMultipleCoinbases, str)
 		}
 	}
@@ -543,7 +539,7 @@ func checkBlockSanity(params *chaincfg.Params, block *btcutil.Block, powLimit *b
 	// checks.  Bitcoind builds the tree here and checks the merkle root
 	// after the following checks, but there is no reason not to check the
 	// merkle root matches here.
-	merkles := BuildMerkleTreeStore(block.Transactions())
+	merkles := BuildMerkleTreeStore(block.Transactions(), false)
 	calculatedMerkleRoot := merkles[len(merkles)-1]
 	if !header.MerkleRoot.IsEqual(calculatedMerkleRoot) {
 		str := fmt.Sprintf("block merkle root is invalid - block "+
@@ -555,9 +551,9 @@ func checkBlockSanity(params *chaincfg.Params, block *btcutil.Block, powLimit *b
 	// Check for duplicate transactions.  This check will be fairly quick
 	// since the transaction hashes are already cached due to building the
 	// merkle tree above.
-	existingTxHashes := make(map[wire.ShaHash]struct{})
+	existingTxHashes := make(map[chainhash.Hash]struct{})
 	for _, tx := range transactions {
-		hash := tx.Sha()
+		hash := tx.Hash()
 		if _, exists := existingTxHashes[*hash]; exists {
 			str := fmt.Sprintf("block contains duplicate "+
 				"transaction %v", hash)
@@ -573,11 +569,11 @@ func checkBlockSanity(params *chaincfg.Params, block *btcutil.Block, powLimit *b
 		// We could potentially overflow the accumulator so check for
 		// overflow.
 		lastSigOps := totalSigOps
-		totalSigOps += CountSigOps(tx)
-		if totalSigOps < lastSigOps || totalSigOps > MaxSigOpsPerBlock {
+		totalSigOps += (CountSigOps(tx) * WitnessScaleFactor)
+		if totalSigOps < lastSigOps || totalSigOps > MaxBlockSigOpsCost {
 			str := fmt.Sprintf("block contains too many signature "+
 				"operations - got %v, max %v", totalSigOps,
-				MaxSigOpsPerBlock)
+				MaxBlockSigOpsCost)
 			return ruleError(ErrTooManySigOps, str)
 		}
 	}
@@ -597,172 +593,6 @@ func CheckBlockSanity(params *chaincfg.Params, block *btcutil.Block, powLimit *b
 	return checkBlockSanity(params, block, powLimit, timeSource, BFNone)
 }
 
-// checkBlockHeaderContext peforms several validation checks on the block header
-// which depend on its position within the block chain.
-//
-// The flags modify the behavior of this function as follows:
-//  - BFFastAdd: All checks except those involving comparing the header against
-//    the checkpoints are not performed.
-func (b *BlockChain) checkBlockHeaderContext(header *wire.BlockHeader, prevNode *blockNode, flags BehaviorFlags) error {
-	// The genesis block is valid by definition.
-	if prevNode == nil {
-		return nil
-	}
-
-	fastAdd := flags&BFFastAdd == BFFastAdd
-	if !fastAdd {
-		// Ensure the timestamp for the block header is after the
-		// median time of the last several blocks (medianTimeBlocks).
-		medianTime, err := b.calcPastMedianTime(prevNode)
-		if err != nil {
-			log.Errorf("calcPastMedianTime: %v", err)
-			return err
-		}
-		if !header.Timestamp.After(medianTime) {
-			str := "block timestamp of %v is not after expected %v"
-			str = fmt.Sprintf(str, header.Timestamp, medianTime)
-			return ruleError(ErrTimeTooOld, str)
-		}
-	}
-
-	// The height of this block is one more than the referenced previous
-	// block.
-	blockHeight := prevNode.height + 1
-
-	// Ensure chain matches up to predetermined checkpoints.
-	blockHash := header.BlockSha()
-	if !b.verifyCheckpoint(blockHeight, &blockHash) {
-		str := fmt.Sprintf("block at height %d does not match "+
-			"checkpoint hash", blockHeight)
-		return ruleError(ErrBadCheckpoint, str)
-	}
-
-	// Find the previous checkpoint and prevent blocks which fork the main
-	// chain before it.  This prevents storage of new, otherwise valid,
-	// blocks which build off of old blocks that are likely at a much easier
-	// difficulty and therefore could be used to waste cache and disk space.
-	checkpointBlock, err := b.findPreviousCheckpoint()
-	if err != nil {
-		return err
-	}
-	if checkpointBlock != nil && blockHeight < checkpointBlock.Height() {
-		str := fmt.Sprintf("block at height %d forks the main chain "+
-			"before the previous checkpoint at height %d",
-			blockHeight, checkpointBlock.Height())
-		return ruleError(ErrForkTooOld, str)
-	}
-
-	if !fastAdd {
-		// Reject version 3 blocks once a majority of the network has
-		// upgraded.  This is part of BIP0065.
-		if header.Version < 4 && b.isMajorityVersion(4, prevNode,
-			b.chainParams.BlockRejectNumRequired) {
-
-			str := "new blocks with version %d are no longer valid"
-			str = fmt.Sprintf(str, header.Version)
-			return ruleError(ErrBlockVersionTooOld, str)
-		}
-
-		// Reject version 2 blocks once a majority of the network has
-		// upgraded.  This is part of BIP0066.
-		if header.Version < 3 && b.isMajorityVersion(3, prevNode,
-			b.chainParams.BlockRejectNumRequired) {
-
-			str := "new blocks with version %d are no longer valid"
-			str = fmt.Sprintf(str, header.Version)
-			return ruleError(ErrBlockVersionTooOld, str)
-		}
-
-		// Reject version 1 blocks once a majority of the network has
-		// upgraded.  This is part of BIP0034.
-		if header.Version < 2 && b.isMajorityVersion(2, prevNode,
-			b.chainParams.BlockRejectNumRequired) {
-
-			str := "new blocks with version %d are no longer valid"
-			str = fmt.Sprintf(str, header.Version)
-			return ruleError(ErrBlockVersionTooOld, str)
-		}*/
-	}
-
-	return nil
-}
-
-// checkBlockContext peforms several validation checks on the block which depend
-// on its position within the block chain.
-//
-// The flags modify the behavior of this function as follows:
-//  - BFFastAdd: The transaction are not checked to see if they are finalized
-//    and the somewhat expensive BIP0034 validation is not performed.
-//
-// The flags are also passed to checkBlockHeaderContext.  See its documentation
-// for how the flags modify its behavior.
-func (b *BlockChain) checkBlockContext(block *btcutil.Block, prevNode *blockNode, flags BehaviorFlags) error {
-	// The genesis block is valid by definition.
-	if prevNode == nil {
-		return nil
-	}
-
-	// Perform all block header related validation checks.
-	header := &block.MsgBlock().Header
-	err := b.checkBlockHeaderContext(header, prevNode, flags)
-	if err != nil {
-		return err
-	}
-
-	fastAdd := flags&BFFastAdd == BFFastAdd
-	if !fastAdd {
-		// Ensure the difficulty specified in the block header matches
-		// the calculated difficulty based on the previous block and
-		// difficulty retarget rules.
-		// ppc: must be done here because we can't determine if block is
-		// proof-of-stake from header
-		expectedDifficulty, err := b.ppcCalcNextRequiredDifficulty(
-			prevNode, block.IsProofOfStake())
-		if err != nil {
-			return err
-		}
-		blockDifficulty := header.Bits
-		if blockDifficulty != expectedDifficulty {
-			log.Infof("maybeAcceptBlock : block %v, prevNode %v(%d)", header.BlockSha(), prevNode.hash, prevNode.bits)
-			str := "block difficulty of %d is not the expected value of %d"
-			str = fmt.Sprintf(str, blockDifficulty, expectedDifficulty)
-			return ruleError(ErrUnexpectedDifficulty, str)
-		}
-
-		// The height of this block is one more than the referenced
-		// previous block.
-		blockHeight := prevNode.height + 1
-
-		// Ensure all transactions in the block are finalized.
-		for _, tx := range block.Transactions() {
-			if !IsFinalizedTransaction(tx, blockHeight,
-				header.Timestamp) {
-
-				str := fmt.Sprintf("block contains unfinalized "+
-					"transaction %v", tx.Sha())
-				return ruleError(ErrUnfinalizedTx, str)
-			}
-		}
-
-		// Ensure coinbase starts with serialized block heights for
-		// blocks whose version is the serializedHeightVersion or newer
-		// once a majority of the network has upgraded.  This is part of
-		// BIP0034.
-		if ShouldHaveSerializedBlockHeight(header) &&
-			b.isMajorityVersion(serializedHeightVersion, prevNode,
-				b.chainParams.BlockEnforceNumRequired) {
-
-			coinbaseTx := block.Transactions()[0]
-			err := checkSerializedHeight(coinbaseTx, blockHeight)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
 // ExtractCoinbaseHeight attempts to extract the height of the block from the
 // scriptSig of a coinbase transaction.  Coinbase heights are only present in
 // blocks of version 2 or later.  This was added as part of BIP0034.
@@ -776,6 +606,18 @@ func ExtractCoinbaseHeight(coinbaseTx *btcutil.Tx) (int32, error) {
 		return 0, ruleError(ErrMissingCoinbaseHeight, str)
 	}
 
+	// Detect the case when the block height is a small integer encoded with
+	// as single byte.
+	opcode := int(sigScript[0])
+	if opcode == txscript.OP_0 {
+		return 0, nil
+	}
+	if opcode >= txscript.OP_1 && opcode <= txscript.OP_16 {
+		return int32(opcode - (txscript.OP_1 - 1)), nil
+	}
+
+	// Otherwise, the opcode is the length of the following bytes which
+	// encode in the block height.
 	serializedLen := int(sigScript[0])
 	if len(sigScript[1:]) < serializedLen {
 		str := "the coinbase signature script for blocks of " +
@@ -785,7 +627,7 @@ func ExtractCoinbaseHeight(coinbaseTx *btcutil.Tx) (int32, error) {
 		return 0, ruleError(ErrMissingCoinbaseHeight, str)
 	}
 
-	serializedHeightBytes := make([]byte, 8, 8)
+	serializedHeightBytes := make([]byte, 8)
 	copy(serializedHeightBytes, sigScript[1:serializedLen+1])
 	serializedHeight := binary.LittleEndian.Uint64(serializedHeightBytes)
 
@@ -809,16 +651,174 @@ func checkSerializedHeight(coinbaseTx *btcutil.Tx, wantHeight int32) error {
 	return nil
 }
 
-// isTransactionSpent returns whether or not the provided transaction data
-// describes a fully spent transaction.  A fully spent transaction is one where
-// all outputs have been spent.
-func isTransactionSpent(txD *TxData) bool {
-	for _, isOutputSpent := range txD.Spent {
-		if !isOutputSpent {
-			return false
+// checkBlockHeaderContext performs several validation checks on the block header
+// which depend on its position within the block chain.
+//
+// The flags modify the behavior of this function as follows:
+//  - BFFastAdd: All checks except those involving comparing the header against
+//    the checkpoints are not performed.
+//
+// This function MUST be called with the chain state lock held (for writes).
+func (b *BlockChain) checkBlockHeaderContext(header *wire.BlockHeader, prevNode *blockNode, flags BehaviorFlags) error {
+	fastAdd := flags&BFFastAdd == BFFastAdd
+	if !fastAdd {
+		// Ensure the timestamp for the block header is after the
+		// median time of the last several blocks (medianTimeBlocks).
+		medianTime := prevNode.CalcPastMedianTime()
+		if !header.Timestamp.After(medianTime) {
+			str := "block timestamp of %v is not after expected %v"
+			str = fmt.Sprintf(str, header.Timestamp, medianTime)
+			return ruleError(ErrTimeTooOld, str)
 		}
 	}
-	return true
+
+	// The height of this block is one more than the referenced previous
+	// block.
+	blockHeight := prevNode.height + 1
+
+	// Ensure chain matches up to predetermined checkpoints.
+	blockHash := header.BlockHash()
+	if !b.verifyCheckpoint(blockHeight, &blockHash) {
+		str := fmt.Sprintf("block at height %d does not match "+
+			"checkpoint hash", blockHeight)
+		return ruleError(ErrBadCheckpoint, str)
+	}
+
+	// Find the previous checkpoint and prevent blocks which fork the main
+	// chain before it.  This prevents storage of new, otherwise valid,
+	// blocks which build off of old blocks that are likely at a much easier
+	// difficulty and therefore could be used to waste cache and disk space.
+	checkpointNode, err := b.findPreviousCheckpoint()
+	if err != nil {
+		return err
+	}
+	if checkpointNode != nil && blockHeight < checkpointNode.height {
+		str := fmt.Sprintf("block at height %d forks the main chain "+
+			"before the previous checkpoint at height %d",
+			blockHeight, checkpointNode.height)
+		return ruleError(ErrForkTooOld, str)
+	}
+
+	// Reject outdated block versions once a majority of the network
+	// has upgraded.  These were originally voted on by BIP0034,
+	// BIP0065, and BIP0066.
+	params := b.chainParams
+	if header.Version < 2 && blockHeight >= params.BIP0034Height ||
+		header.Version < 3 && blockHeight >= params.BIP0066Height ||
+		header.Version < 4 && blockHeight >= params.BIP0065Height {
+
+		str := "new blocks with version %d are no longer valid"
+		str = fmt.Sprintf(str, header.Version)
+		return ruleError(ErrBlockVersionTooOld, str)
+	}
+
+	return nil
+}
+
+// checkBlockContext peforms several validation checks on the block which depend
+// on its position within the block chain.
+//
+// The flags modify the behavior of this function as follows:
+//  - BFFastAdd: The transaction are not checked to see if they are finalized
+//    and the somewhat expensive BIP0034 validation is not performed.
+//
+// The flags are also passed to checkBlockHeaderContext.  See its documentation
+// for how the flags modify its behavior.
+//
+// This function MUST be called with the chain state lock held (for writes).
+func (b *BlockChain) checkBlockContext(block *btcutil.Block, prevNode *blockNode, flags BehaviorFlags) error {
+	// Perform all block header related validation checks.
+	header := &block.MsgBlock().Header
+	err := b.checkBlockHeaderContext(header, prevNode, flags)
+	if err != nil {
+		return err
+	}
+
+	fastAdd := flags&BFFastAdd == BFFastAdd
+	if !fastAdd {
+		// Obtain the latest state of the deployed CSV soft-fork in
+		// order to properly guard the new validation behavior based on
+		// the current BIP 9 version bits state.
+		csvState, err := b.deploymentState(prevNode, chaincfg.DeploymentCSV)
+		if err != nil {
+			return err
+		}
+
+		// Once the CSV soft-fork is fully active, we'll switch to
+		// using the current median time past of the past block's
+		// timestamps for all lock-time based checks.
+		blockTime := header.Timestamp
+		if csvState == ThresholdActive {
+			blockTime = prevNode.CalcPastMedianTime()
+		}
+
+		// The height of this block is one more than the referenced
+		// previous block.
+		blockHeight := prevNode.height + 1
+
+		// Ensure all transactions in the block are finalized.
+		for _, tx := range block.Transactions() {
+			if !IsFinalizedTransaction(tx, blockHeight,
+				blockTime) {
+
+				str := fmt.Sprintf("block contains unfinalized "+
+					"transaction %v", tx.Hash())
+				return ruleError(ErrUnfinalizedTx, str)
+			}
+		}
+
+		// Ensure coinbase starts with serialized block heights for
+		// blocks whose version is the serializedHeightVersion or newer
+		// once a majority of the network has upgraded.  This is part of
+		// BIP0034.
+		if ShouldHaveSerializedBlockHeight(header) &&
+			blockHeight >= b.chainParams.BIP0034Height {
+
+			coinbaseTx := block.Transactions()[0]
+			err := checkSerializedHeight(coinbaseTx, blockHeight)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Query for the Version Bits state for the segwit soft-fork
+		// deployment. If segwit is active, we'll switch over to
+		// enforcing all the new rules.
+		segwitState, err := b.deploymentState(prevNode,
+			chaincfg.DeploymentSegwit)
+		if err != nil {
+			return err
+		}
+
+		// If segwit is active, then we'll need to fully validate the
+		// new witness commitment for adherence to the rules.
+		if segwitState == ThresholdActive {
+			// Validate the witness commitment (if any) within the
+			// block.  This involves asserting that if the coinbase
+			// contains the special commitment output, then this
+			// merkle root matches a computed merkle root of all
+			// the wtxid's of the transactions within the block. In
+			// addition, various other checks against the
+			// coinbase's witness stack.
+			if err := ValidateWitnessCommitment(block); err != nil {
+				return err
+			}
+
+			// Once the witness commitment, witness nonce, and sig
+			// op cost have been validated, we can finally assert
+			// that the block's weight doesn't exceed the current
+			// consensus parameter.
+			blockWeight := GetBlockWeight(block)
+			if blockWeight > MaxBlockWeight {
+				str := fmt.Sprintf("block's weight metric is "+
+					"too high - got %v, max %v",
+					blockWeight, MaxBlockWeight)
+				return ruleError(ErrBlockWeightTooHigh, str)
+			}
+		}
+	}
+
+	return nil
 }
 
 // checkBIP0030 ensures blocks do not contain duplicate transactions which
@@ -827,42 +827,36 @@ func isTransactionSpent(txD *TxData) bool {
 // duplicated to effectively revert the overwritten transactions to a single
 // confirmation thereby making them vulnerable to a double spend.
 //
-// For more details, see https://en.bitcoin.it/wiki/BIP_0030 and
+// For more details, see
+// https://github.com/bitcoin/bips/blob/master/bip-0030.mediawiki and
 // http://r6.ca/blog/20120206T005236Z.html.
-func (b *BlockChain) checkBIP0030(node *blockNode, block *btcutil.Block) error {
-	// Attempt to fetch duplicate transactions for all of the transactions
-	// in this block from the point of view of the parent node.
-	fetchSet := make(map[wire.ShaHash]struct{})
+//
+// This function MUST be called with the chain state lock held (for reads).
+func (b *BlockChain) checkBIP0030(node *blockNode, block *btcutil.Block, view *UtxoViewpoint) error {
+	// Fetch utxos for all of the transaction ouputs in this block.
+	// Typically, there will not be any utxos for any of the outputs.
+	fetchSet := make(map[wire.OutPoint]struct{})
 	for _, tx := range block.Transactions() {
-		fetchSet[*tx.Sha()] = struct{}{}
+		prevOut := wire.OutPoint{Hash: *tx.Hash()}
+		for txOutIdx := range tx.MsgTx().TxOut {
+			prevOut.Index = uint32(txOutIdx)
+			fetchSet[prevOut] = struct{}{}
+		}
 	}
-	txResults, err := b.fetchTxStore(node, fetchSet)
+	err := view.fetchUtxos(b.db, fetchSet)
 	if err != nil {
 		return err
 	}
 
-	// Examine the resulting data about the requested transactions.
-	for _, txD := range txResults {
-		switch txD.Err {
-		// A duplicate transaction was not found.  This is the most
-		// common case.
-		case database.ErrTxShaMissing:
-			continue
-
-		// A duplicate transaction was found.  This is only allowed if
-		// the duplicate transaction is fully spent.
-		case nil:
-			if !isTransactionSpent(txD) {
-				str := fmt.Sprintf("tried to overwrite "+
-					"transaction %v at block height %d "+
-					"that is not fully spent", txD.Hash,
-					txD.BlockHeight)
-				return ruleError(ErrOverwriteTx, str)
-			}
-
-		// Some other unexpected error occurred.  Return it now.
-		default:
-			return txD.Err
+	// Duplicate transactions are only allowed if the previous transaction
+	// is fully spent.
+	for outpoint := range fetchSet {
+		utxo := view.LookupEntry(outpoint)
+		if utxo != nil && !utxo.IsSpent() {
+			str := fmt.Sprintf("tried to overwrite transaction %v "+
+				"at block height %d that is not fully spent",
+				outpoint.Hash, utxo.BlockHeight())
+			return ruleError(ErrOverwriteTx, str)
 		}
 	}
 
@@ -877,53 +871,43 @@ func (b *BlockChain) checkBIP0030(node *blockNode, block *btcutil.Block) error {
 // amount, and verifying the signatures to prove the spender was the owner of
 // the bitcoins and therefore allowed to spend them.  As it checks the inputs,
 // it also calculates the total fees for the transaction and returns that value.
-func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, txStore TxStore) (int64, error) {
+//
+// NOTE: The transaction MUST have already been sanity checked with the
+// CheckTransactionSanity function prior to calling this function.
+func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpoint, chainParams *chaincfg.Params) (int64, error) {
 	// Coinbase transactions have no inputs.
 	if IsCoinBase(tx) {
 		return 0, nil
 	}
 
-	txHash := tx.Sha()
+	txHash := tx.Hash()
 	var totalSatoshiIn int64
-	for _, txIn := range tx.MsgTx().TxIn {
-
-		// Ensure the input is available.
-		txInHash := &txIn.PreviousOutPoint.Hash
-		originTx, exists := txStore[*txInHash]
-		if !exists || originTx.Err != nil || originTx.Tx == nil {
-			str := fmt.Sprintf("unable to find input transaction "+
-				"%v for transaction %v", txInHash, txHash)
-			return 0, ruleError(ErrMissingTx, str)
+	for txInIndex, txIn := range tx.MsgTx().TxIn {
+		// Ensure the referenced input transaction is available.
+		utxo := utxoView.LookupEntry(txIn.PreviousOutPoint)
+		if utxo == nil || utxo.IsSpent() {
+			str := fmt.Sprintf("output %v referenced from "+
+				"transaction %s:%d either does not exist or "+
+				"has already been spent", txIn.PreviousOutPoint,
+				tx.Hash(), txInIndex)
+			return 0, ruleError(ErrMissingTxOut, str)
 		}
 
 		// Ensure the transaction is not spending coins which have not
 		// yet reached the required coinbase maturity.
-		if IsCoinBase(originTx.Tx) || IsCoinStake(originTx.Tx) { // ppc:
-			originHeight := originTx.BlockHeight
+		if utxo.IsCoinBase() {
+			originHeight := utxo.BlockHeight()
 			blocksSincePrev := txHeight - originHeight
-			if blocksSincePrev < blockChain.chainParams.CoinbaseMaturity {
+			coinbaseMaturity := int32(chainParams.CoinbaseMaturity)
+			if blocksSincePrev < coinbaseMaturity {
 				str := fmt.Sprintf("tried to spend coinbase "+
-					"transaction %v from height %v at "+
-					"height %v before required maturity "+
-					"of %v blocks", txInHash, originHeight,
-					txHeight, blockChain.chainParams.CoinbaseMaturity)
+					"transaction output %v from height %v "+
+					"at height %v before required maturity "+
+					"of %v blocks", txIn.PreviousOutPoint,
+					originHeight, txHeight,
+					coinbaseMaturity)
 				return 0, ruleError(ErrImmatureSpend, str)
 			}
-		}
-
-		// Ensure the transaction is not double spending coins.
-		originTxIndex := txIn.PreviousOutPoint.Index
-		if originTxIndex >= uint32(len(originTx.Spent)) {
-			str := fmt.Sprintf("out of bounds input index %d in "+
-				"transaction %v referenced from transaction %v",
-				originTxIndex, txInHash, txHash)
-			return 0, ruleError(ErrBadTxInput, str)
-		}
-		if originTx.Spent[originTxIndex] {
-			str := fmt.Sprintf("transaction %v tried to double "+
-				"spend coins from transaction %v", txHash,
-				txInHash)
-			return 0, ruleError(ErrDoubleSpend, str)
 		}
 
 		// Ensure the transaction amounts are in range.  Each of the
@@ -932,16 +916,17 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, txStore TxStore) (in
 		// a transaction are in a unit value known as a satoshi.  One
 		// bitcoin is a quantity of satoshi as defined by the
 		// SatoshiPerBitcoin constant.
-		originTxSatoshi := originTx.Tx.MsgTx().TxOut[originTxIndex].Value
+		originTxSatoshi := utxo.Amount()
 		if originTxSatoshi < 0 {
 			str := fmt.Sprintf("transaction output has negative "+
-				"value of %v", originTxSatoshi)
+				"value of %v", btcutil.Amount(originTxSatoshi))
 			return 0, ruleError(ErrBadTxOutValue, str)
 		}
 		if originTxSatoshi > btcutil.MaxSatoshi {
 			str := fmt.Sprintf("transaction output value of %v is "+
 				"higher than max allowed value of %v",
-				originTxSatoshi, btcutil.MaxSatoshi)
+				btcutil.Amount(originTxSatoshi),
+				btcutil.MaxSatoshi)
 			return 0, ruleError(ErrBadTxOutValue, str)
 		}
 
@@ -1008,21 +993,27 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, txStore TxStore) (in
 }
 
 // checkConnectBlock performs several checks to confirm connecting the passed
-// block to the main chain (including whatever reorganization might be necessary
-// to get this node to the main chain) does not violate any rules.
+// block to the chain represented by the passed view does not violate any rules.
+// In addition, the passed view is updated to spend all of the referenced
+// outputs and add all of the new utxos created by block.  Thus, the view will
+// represent the state of the chain as if the block were actually connected and
+// consequently the best hash for the view is also updated to passed block.
 //
-// The CheckConnectBlock function makes use of this function to perform the
-// bulk of its work.  The only difference is this function accepts a node which
-// may or may not require reorganization to connect it to the main chain whereas
-// CheckConnectBlock creates a new node which specifically connects to the end
-// of the current main chain and then calls this function with that node.
+// An example of some of the checks performed are ensuring connecting the block
+// would not cause any duplicate transaction hashes for old transactions that
+// aren't already fully spent, double spends, exceeding the maximum allowed
+// signature operations per block, invalid values in relation to the expected
+// block subsidy, or fail transaction script validation.
 //
-// See the comments for CheckConnectBlock for some examples of the type of
-// checks performed by this function.
-func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block) error {
-
-	defer timeTrack(now(), fmt.Sprintf("checkConnectBlock(%v)", slice(block.Sha())[0]))
-
+// The CheckConnectBlockTemplate function makes use of this function to perform
+// the bulk of its work.  The only difference is this function accepts a node
+// which may or may not require reorganization to connect it to the main chain
+// whereas CheckConnectBlockTemplate creates a new node which specifically
+// connects to the end of the current main chain and then calls this function
+// with that node.
+//
+// This function MUST be called with the chain state lock held (for writes).
+func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block, view *UtxoViewpoint, stxos *[]SpentTxOut) error {
 	// If the side chain blocks end up in the database, a call to
 	// CheckBlockSanity should be done here in case a previous version
 	// allowed a block that is no longer valid.  However, since the
@@ -1030,32 +1021,49 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block) er
 	// it isn't currently necessary.
 
 	// The coinbase for the Genesis block is not spendable, so just return
-	// now.
-	if node.hash.IsEqual(b.chainParams.GenesisHash) && b.bestChain == nil {
-		return nil
+	// an error now.
+	if node.hash.IsEqual(b.chainParams.GenesisHash) {
+		str := "the coinbase for the genesis block is not spendable"
+		return ruleError(ErrMissingTxOut, str)
+	}
+
+	// Ensure the view is for the node being checked.
+	parentHash := &block.MsgBlock().Header.PrevBlock
+	if !view.BestHash().IsEqual(parentHash) {
+		return AssertError(fmt.Sprintf("inconsistent view when "+
+			"checking block connection: best hash is %v instead "+
+			"of expected %v", view.BestHash(), parentHash))
 	}
 
 	// BIP0030 added a rule to prevent blocks which contain duplicate
 	// transactions that 'overwrite' older transactions which are not fully
 	// spent.  See the documentation for checkBIP0030 for more details.
 	//
-	// There are two blocks in the chain which violate this
-	// rule, so the check must be skipped for those blocks. The
-	// isBIP0030Node function is used to determine if this block is one
-	// of the two blocks that must be skipped.
-	enforceBIP0030 := !isBIP0030Node(node)
-	if enforceBIP0030 {
-		err := b.checkBIP0030(node, block)
+	// There are two blocks in the chain which violate this rule, so the
+	// check must be skipped for those blocks.  The isBIP0030Node function
+	// is used to determine if this block is one of the two blocks that must
+	// be skipped.
+	//
+	// In addition, as of BIP0034, duplicate coinbases are no longer
+	// possible due to its requirement for including the block height in the
+	// coinbase and thus it is no longer possible to create transactions
+	// that 'overwrite' older ones.  Therefore, only enforce the rule if
+	// BIP0034 is not yet active.  This is a useful optimization because the
+	// BIP0030 check is expensive since it involves a ton of cache misses in
+	// the utxoset.
+	if !isBIP0030Node(node) && (node.height < b.chainParams.BIP0034Height) {
+		err := b.checkBIP0030(node, block, view)
 		if err != nil {
 			return err
 		}
 	}
 
-	// Request a map that contains all input transactions for the block from
-	// the point of view of its position within the block chain.  These
-	// transactions are needed for verification of things such as
+	// Load all of the utxos referenced by the inputs for all transactions
+	// in the block don't already exist in the utxo view from the database.
+	//
+	// These utxo entries are needed for verification of things such as
 	// transaction inputs, counting pay-to-script-hashes, and scripts.
-	txInputStore, err := b.fetchInputTransactions(node, block)
+	err := view.fetchInputUtxos(b.db, block)
 	if err != nil {
 		return err
 	}
@@ -1064,10 +1072,16 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block) er
 	// "standard" type.  The rules for this BIP only apply to transactions
 	// after the timestamp defined by txscript.Bip16Activation.  See
 	// https://en.bitcoin.it/wiki/BIP_0016 for more details.
-	enforceBIP0016 := false
-	if node.timestamp.After(txscript.Bip16Activation) {
-		enforceBIP0016 = true
+	enforceBIP0016 := node.timestamp >= txscript.Bip16Activation.Unix()
+
+	// Query for the Version Bits state for the segwit soft-fork
+	// deployment. If segwit is active, we'll switch over to enforcing all
+	// the new rules.
+	segwitState, err := b.deploymentState(node.parent, chaincfg.DeploymentSegwit)
+	if err != nil {
+		return err
 	}
+	enforceSegWit := segwitState == ThresholdActive
 
 	// The number of signature operations must be less than the maximum
 	// allowed per block.  Note that the preliminary sanity checks on a
@@ -1076,32 +1090,28 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block) er
 	// signature operations in each of the input transaction public key
 	// scripts.
 	transactions := block.Transactions()
-	totalSigOps := 0
+	totalSigOpCost := 0
 	for i, tx := range transactions {
-		numsigOps := CountSigOps(tx)
-		if enforceBIP0016 {
-			// Since the first (and only the first) transaction has
-			// already been verified to be a coinbase transaction,
-			// use i == 0 as an optimization for the flag to
-			// countP2SHSigOps for whether or not the transaction is
-			// a coinbase transaction rather than having to do a
-			// full coinbase check again.
-			numP2SHSigOps, err := CountP2SHSigOps(tx, i == 0,
-				txInputStore)
-			if err != nil {
-				return err
-			}
-			numsigOps += numP2SHSigOps
+		// Since the first (and only the first) transaction has
+		// already been verified to be a coinbase transaction,
+		// use i == 0 as an optimization for the flag to
+		// countP2SHSigOps for whether or not the transaction is
+		// a coinbase transaction rather than having to do a
+		// full coinbase check again.
+		sigOpCost, err := GetSigOpCost(tx, i == 0, view, enforceBIP0016,
+			enforceSegWit)
+		if err != nil {
+			return err
 		}
 
 		// Check for overflow or going over the limits.  We have to do
 		// this on every loop iteration to avoid overflow.
-		lastSigops := totalSigOps
-		totalSigOps += numsigOps
-		if totalSigOps < lastSigops || totalSigOps > MaxSigOpsPerBlock {
+		lastSigOpCost := totalSigOpCost
+		totalSigOpCost += sigOpCost
+		if totalSigOpCost < lastSigOpCost || totalSigOpCost > MaxBlockSigOpsCost {
 			str := fmt.Sprintf("block contains too many "+
 				"signature operations - got %v, max %v",
-				totalSigOps, MaxSigOpsPerBlock)
+				totalSigOpCost, MaxBlockSigOpsCost)
 			return ruleError(ErrTooManySigOps, str)
 		}
 	}
@@ -1115,7 +1125,8 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block) er
 	// bounds.
 	var totalFees int64
 	for _, tx := range transactions {
-		txFee, err := CheckTransactionInputs(tx, node.height, txInputStore, b)
+		txFee, err := CheckTransactionInputs(tx, node.height, view,
+			b.chainParams)
 		if err != nil {
 			return err
 		}
@@ -1127,6 +1138,15 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block) er
 		if totalFees < lastTotalFees {
 			return ruleError(ErrBadFees, "total fees for block "+
 				"overflows accumulator")
+		}
+
+		// Add all of the outputs for this transaction which are not
+		// provably unspendable as available utxos.  Also, the passed
+		// spent txos slice is updated to contain an entry for each
+		// spent txout in the order each transaction spends them.
+		err = view.connectTransaction(tx, node.height, stxos)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -1155,45 +1175,75 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block) er
 	// optimization because running the scripts is the most time consuming
 	// portion of block handling.
 	checkpoint := b.LatestCheckpoint()
-	runScripts := !b.noVerify
+	runScripts := true
 	if checkpoint != nil && node.height <= checkpoint.Height {
 		runScripts = false
 	}
 
-	// Get the previous block node.  This function is used over simply
-	// accessing node.parent directly as it will dynamically create previous
-	// block nodes as needed.  This helps allow only the pieces of the chain
-	// that are needed to remain in memory.
-	/* ppc: prevNode, err := b.getPrevNodeFromNode(node)
-	if err != nil {
-		log.Errorf("getPrevNodeFromNode: %v", err)
-		return err
-	}*/
-
 	// Blocks created after the BIP0016 activation time need to have the
 	// pay-to-script-hash checks enabled.
 	var scriptFlags txscript.ScriptFlags
-	if block.MsgBlock().Header.Timestamp.After(txscript.Bip16Activation) {
+	if enforceBIP0016 {
 		scriptFlags |= txscript.ScriptBip16
 	}
 
-	// Enforce DER signatures for block versions 3+ once the majority of the
-	// network has upgraded to the enforcement threshold.  This is part of
-	// BIP0066.
-	/* ppc: blockHeader := &block.MsgBlock().Header
-	if blockHeader.Version >= 3 && b.isMajorityVersion(3, prevNode,
-		b.chainParams.BlockEnforceNumRequired) {
-
+	// Enforce DER signatures for block versions 3+ once the historical
+	// activation threshold has been reached.  This is part of BIP0066.
+	blockHeader := &block.MsgBlock().Header
+	if blockHeader.Version >= 3 && node.height >= b.chainParams.BIP0066Height {
 		scriptFlags |= txscript.ScriptVerifyDERSignatures
 	}*/
 
-	// Enforce CHECKLOCKTIMEVERIFY for block versions 4+ once the majority
-	// of the network has upgraded to the enforcement threshold.  This is
-	// part of BIP0065.
-	if blockHeader.Version >= 4 && b.isMajorityVersion(4, prevNode,
-		b.chainParams.BlockEnforceNumRequired) {
-
+	// Enforce CHECKLOCKTIMEVERIFY for block versions 4+ once the historical
+	// activation threshold has been reached.  This is part of BIP0065.
+	if blockHeader.Version >= 4 && node.height >= b.chainParams.BIP0065Height {
 		scriptFlags |= txscript.ScriptVerifyCheckLockTimeVerify
+	}
+
+	// Enforce CHECKSEQUENCEVERIFY during all block validation checks once
+	// the soft-fork deployment is fully active.
+	csvState, err := b.deploymentState(node.parent, chaincfg.DeploymentCSV)
+	if err != nil {
+		return err
+	}
+	if csvState == ThresholdActive {
+		// If the CSV soft-fork is now active, then modify the
+		// scriptFlags to ensure that the CSV op code is properly
+		// validated during the script checks bleow.
+		scriptFlags |= txscript.ScriptVerifyCheckSequenceVerify
+
+		// We obtain the MTP of the *previous* block in order to
+		// determine if transactions in the current block are final.
+		medianTime := node.parent.CalcPastMedianTime()
+
+		// Additionally, if the CSV soft-fork package is now active,
+		// then we also enforce the relative sequence number based
+		// lock-times within the inputs of all transactions in this
+		// candidate block.
+		for _, tx := range block.Transactions() {
+			// A transaction can only be included within a block
+			// once the sequence locks of *all* its inputs are
+			// active.
+			sequenceLock, err := b.calcSequenceLock(node, tx, view,
+				false)
+			if err != nil {
+				return err
+			}
+			if !SequenceLockActive(sequenceLock, node.height,
+				medianTime) {
+				str := fmt.Sprintf("block contains " +
+					"transaction whose input sequence " +
+					"locks are not met")
+				return ruleError(ErrUnfinalizedTx, str)
+			}
+		}
+	}
+
+	// Enforce the segwit soft-fork package once the soft-fork has shifted
+	// into the "active" version bits state.
+	if enforceSegWit {
+		scriptFlags |= txscript.ScriptVerifyWitness
+		scriptFlags |= txscript.ScriptStrictMultiSig
 	}
 
 	// Now that the inexpensive checks are done and have passed, verify the
@@ -1201,32 +1251,56 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block) er
 	// expensive ECDSA signature check scripts.  Doing this last helps
 	// prevent CPU exhaustion attacks.
 	if runScripts {
-		err := checkBlockScripts(block, txInputStore, scriptFlags, b.sigCache)
+		err := checkBlockScripts(block, view, scriptFlags, b.sigCache,
+			b.hashCache)
 		if err != nil {
 			return err
 		}
 	}
 
+	// Update the best hash for view to include this block since all of its
+	// transactions have been connected.
+	view.SetBestHash(&node.hash)
+
 	return nil
 }
 
-// CheckConnectBlock performs several checks to confirm connecting the passed
-// block to the main chain does not violate any rules.  An example of some of
-// the checks performed are ensuring connecting the block would not cause any
-// duplicate transaction hashes for old transactions that aren't already fully
-// spent, double spends, exceeding the maximum allowed signature operations
-// per block, invalid values in relation to the expected block subisidy, or
-// fail transaction script validation.
+// CheckConnectBlockTemplate fully validates that connecting the passed block to
+// the main chain does not violate any consensus rules, aside from the proof of
+// work requirement. The block must connect to the current tip of the main chain.
 //
-// This function is NOT safe for concurrent access.
-func (b *BlockChain) CheckConnectBlock(block *btcutil.Block) error {
-	prevNode := b.bestChain
-	newNode := ppcNewBlockNode(
-		&block.MsgBlock().Header, block.Sha(), block.Height(), block.Meta())
-	if prevNode != nil {
-		newNode.parent = prevNode
-		newNode.workSum.Add(prevNode.workSum, newNode.workSum)
+// This function is safe for concurrent access.
+func (b *BlockChain) CheckConnectBlockTemplate(block *btcutil.Block) error {
+	b.chainLock.Lock()
+	defer b.chainLock.Unlock()
+
+	// Skip the proof of work check as this is just a block template.
+	flags := BFNoPoWCheck
+
+	// This only checks whether the block can be connected to the tip of the
+	// current chain.
+	tip := b.bestChain.Tip()
+	header := block.MsgBlock().Header
+	if tip.hash != header.PrevBlock {
+		str := fmt.Sprintf("previous block must be the current chain tip %v, "+
+			"instead got %v", tip.hash, header.PrevBlock)
+		return ruleError(ErrPrevBlockNotBest, str)
 	}
 
-	return b.checkConnectBlock(newNode, block)
+	err := checkBlockSanity(block, b.chainParams.PowLimit, b.timeSource, flags)
+	if err != nil {
+		return err
+	}
+
+	err = b.checkBlockContext(block, tip, flags)
+	if err != nil {
+		return err
+	}
+
+	// Leave the spent txouts entry nil in the state since the information
+	// is not needed and thus extra work can be avoided.
+	view := NewUtxoViewpoint()
+	view.SetBestHash(&tip.hash)
+	newNode := newBlockNode(&header, tip)
+	return b.checkConnectBlock(newNode, block, view, nil)
 }

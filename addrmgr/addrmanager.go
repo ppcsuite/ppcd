@@ -1,4 +1,5 @@
-// Copyright (c) 2013-2014 The btcsuite developers
+// Copyright (c) 2013-2016 The btcsuite developers
+// Copyright (c) 2015-2018 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -22,6 +23,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ppcsuite/ppcd/chaincfg/chainhash"
 	"github.com/ppcsuite/ppcd/wire"
 )
 
@@ -44,6 +46,7 @@ type AddrManager struct {
 	nNew           int
 	lamtx          sync.Mutex
 	localAddresses map[string]*localAddress
+	version        int
 }
 
 type serializedKnownAddress struct {
@@ -53,6 +56,8 @@ type serializedKnownAddress struct {
 	TimeStamp   int64
 	LastAttempt int64
 	LastSuccess int64
+	Services    wire.ServiceFlag
+	SrcServices wire.ServiceFlag
 	// no refcount or tried, that is available from context.
 }
 
@@ -94,8 +99,6 @@ const (
 	// needAddressThreshold is the number of addresses under which the
 	// address manager will claim to need more addresses.
 	needAddressThreshold = 1000
-
-	newAddressBufferSize = 50
 
 	// dumpAddressInterval is the interval used to dump the address
 	// cache to disk for future use.
@@ -155,7 +158,7 @@ const (
 	getAddrPercent = 23
 
 	// serialisationVersion is the current version of the on-disk format.
-	serialisationVersion = 1
+	serialisationVersion = 2
 )
 
 // updateAddress is a helper function to either update an address already known
@@ -170,7 +173,7 @@ func (a *AddrManager) updateAddress(netAddr, srcAddr *wire.NetAddress) {
 	addr := NetAddressKey(netAddr)
 	ka := a.find(netAddr)
 	if ka != nil {
-		// TODO(oga) only update addresses periodically.
+		// TODO: only update addresses periodically.
 		// Update the last seen time and services.
 		// note that to prevent causing excess garbage on getaddr
 		// messages the netaddresses in addrmaanger are *immutable*,
@@ -299,7 +302,7 @@ func (a *AddrManager) getNewBucket(netAddr, srcAddr *wire.NetAddress) int {
 	data1 = append(data1, a.key[:]...)
 	data1 = append(data1, []byte(GroupKey(netAddr))...)
 	data1 = append(data1, []byte(GroupKey(srcAddr))...)
-	hash1 := wire.DoubleSha256(data1)
+	hash1 := chainhash.DoubleHashB(data1)
 	hash64 := binary.LittleEndian.Uint64(hash1)
 	hash64 %= newBucketsPerGroup
 	var hashbuf [8]byte
@@ -309,7 +312,7 @@ func (a *AddrManager) getNewBucket(netAddr, srcAddr *wire.NetAddress) int {
 	data2 = append(data2, GroupKey(srcAddr)...)
 	data2 = append(data2, hashbuf[:]...)
 
-	hash2 := wire.DoubleSha256(data2)
+	hash2 := chainhash.DoubleHashB(data2)
 	return int(binary.LittleEndian.Uint64(hash2) % newBucketCount)
 }
 
@@ -319,7 +322,7 @@ func (a *AddrManager) getTriedBucket(netAddr *wire.NetAddress) int {
 	data1 := []byte{}
 	data1 = append(data1, a.key[:]...)
 	data1 = append(data1, []byte(NetAddressKey(netAddr))...)
-	hash1 := wire.DoubleSha256(data1)
+	hash1 := chainhash.DoubleHashB(data1)
 	hash64 := binary.LittleEndian.Uint64(hash1)
 	hash64 %= triedBucketsPerGroup
 	var hashbuf [8]byte
@@ -329,7 +332,7 @@ func (a *AddrManager) getTriedBucket(netAddr *wire.NetAddress) int {
 	data2 = append(data2, GroupKey(netAddr)...)
 	data2 = append(data2, hashbuf[:]...)
 
-	hash2 := wire.DoubleSha256(data2)
+	hash2 := chainhash.DoubleHashB(data2)
 	return int(binary.LittleEndian.Uint64(hash2) % triedBucketCount)
 }
 
@@ -362,7 +365,7 @@ func (a *AddrManager) savePeers() {
 	// First we make a serialisable datastructure so we can encode it to
 	// json.
 	sam := new(serializedAddrManager)
-	sam.Version = serialisationVersion
+	sam.Version = a.version
 	copy(sam.Key[:], a.key[:])
 
 	sam.Addresses = make([]*serializedKnownAddress, len(a.addrIndex))
@@ -375,6 +378,10 @@ func (a *AddrManager) savePeers() {
 		ska.Attempts = v.attempts
 		ska.LastAttempt = v.lastattempt.Unix()
 		ska.LastSuccess = v.lastsuccess.Unix()
+		if a.version > 1 {
+			ska.Services = v.na.Services
+			ska.SrcServices = v.srcAddr.Services
+		}
 		// Tried and refs are implicit in the rest of the structure
 		// and will be worked out from context on unserialisation.
 		sam.Addresses[i] = ska
@@ -451,24 +458,43 @@ func (a *AddrManager) deserializePeers(filePath string) error {
 		return fmt.Errorf("error reading %s: %v", filePath, err)
 	}
 
-	if sam.Version != serialisationVersion {
+	// Since decoding JSON is backwards compatible (i.e., only decodes
+	// fields it understands), we'll only return an error upon seeing a
+	// version past our latest supported version.
+	if sam.Version > serialisationVersion {
 		return fmt.Errorf("unknown version %v in serialized "+
 			"addrmanager", sam.Version)
 	}
+
 	copy(a.key[:], sam.Key[:])
 
 	for _, v := range sam.Addresses {
 		ka := new(KnownAddress)
-		ka.na, err = a.DeserializeNetAddress(v.Addr)
+
+		// The first version of the serialized address manager was not
+		// aware of the service bits associated with this address, so
+		// we'll assign a default of SFNodeNetwork to it.
+		if sam.Version == 1 {
+			v.Services = wire.SFNodeNetwork
+		}
+		ka.na, err = a.DeserializeNetAddress(v.Addr, v.Services)
 		if err != nil {
 			return fmt.Errorf("failed to deserialize netaddress "+
 				"%s: %v", v.Addr, err)
 		}
-		ka.srcAddr, err = a.DeserializeNetAddress(v.Src)
+
+		// The first version of the serialized address manager was not
+		// aware of the service bits associated with the source address,
+		// so we'll assign a default of SFNodeNetwork to it.
+		if sam.Version == 1 {
+			v.SrcServices = wire.SFNodeNetwork
+		}
+		ka.srcAddr, err = a.DeserializeNetAddress(v.Src, v.SrcServices)
 		if err != nil {
 			return fmt.Errorf("failed to deserialize netaddress "+
 				"%s: %v", v.Src, err)
 		}
+
 		ka.attempts = v.Attempts
 		ka.lastattempt = time.Unix(v.LastAttempt, 0)
 		ka.lastsuccess = time.Unix(v.LastSuccess, 0)
@@ -520,8 +546,10 @@ func (a *AddrManager) deserializePeers(filePath string) error {
 	return nil
 }
 
-// DeserializeNetAddress converts a given address string to a *wire.NetAddress
-func (a *AddrManager) DeserializeNetAddress(addr string) (*wire.NetAddress, error) {
+// DeserializeNetAddress converts a given address string to a *wire.NetAddress.
+func (a *AddrManager) DeserializeNetAddress(addr string,
+	services wire.ServiceFlag) (*wire.NetAddress, error) {
+
 	host, portStr, err := net.SplitHostPort(addr)
 	if err != nil {
 		return nil, err
@@ -531,7 +559,7 @@ func (a *AddrManager) DeserializeNetAddress(addr string) (*wire.NetAddress, erro
 		return nil, err
 	}
 
-	return a.HostToNetAddress(host, uint16(port), wire.SFNodeNetwork)
+	return a.HostToNetAddress(host, uint16(port), services)
 }
 
 // Start begins the core address handler which manages a pool of known
@@ -597,18 +625,16 @@ func (a *AddrManager) AddAddressByIP(addrIP string) error {
 		return err
 	}
 	// Put it in wire.Netaddress
-	var na wire.NetAddress
-	na.Timestamp = time.Now()
-	na.IP = net.ParseIP(addr)
-	if na.IP == nil {
+	ip := net.ParseIP(addr)
+	if ip == nil {
 		return fmt.Errorf("invalid ip address %s", addr)
 	}
 	port, err := strconv.ParseUint(portStr, 10, 0)
 	if err != nil {
 		return fmt.Errorf("invalid port %s: %v", portStr, err)
 	}
-	na.Port = uint16(port)
-	a.AddAddress(&na, &na) // XXX use correct src address
+	na := wire.NewNetAddressIPPort(ip, uint16(port), 0)
+	a.AddAddress(na, na) // XXX use correct src address
 	return nil
 }
 
@@ -637,19 +663,7 @@ func (a *AddrManager) NeedMoreAddresses() bool {
 // AddressCache returns the current address cache.  It must be treated as
 // read-only (but since it is a copy now, this is not as dangerous).
 func (a *AddrManager) AddressCache() []*wire.NetAddress {
-	a.mtx.Lock()
-	defer a.mtx.Unlock()
-	if a.nNew+a.nTried == 0 {
-		return nil
-	}
-
-	allAddr := make([]*wire.NetAddress, a.nNew+a.nTried)
-	i := 0
-	// Iteration order is undefined here, but we randomise it anyway.
-	for _, v := range a.addrIndex {
-		allAddr[i] = v.na
-		i++
-	}
+	allAddr := a.getAddresses()
 
 	numAddresses := len(allAddr) * getAddrPercent / 100
 	if numAddresses > getAddrMax {
@@ -665,7 +679,26 @@ func (a *AddrManager) AddressCache() []*wire.NetAddress {
 	}
 
 	// slice off the limit we are willing to share.
-	return allAddr[:numAddresses]
+	return allAddr[0:numAddresses]
+}
+
+// getAddresses returns all of the addresses currently found within the
+// manager's address cache.
+func (a *AddrManager) getAddresses() []*wire.NetAddress {
+	a.mtx.Lock()
+	defer a.mtx.Unlock()
+
+	addrIndexLen := len(a.addrIndex)
+	if addrIndexLen == 0 {
+		return nil
+	}
+
+	addrs := make([]*wire.NetAddress, 0, addrIndexLen)
+	for _, v := range a.addrIndex {
+		addrs = append(addrs, v.na)
+	}
+
+	return addrs
 }
 
 // reset resets the address manager by reinitialising the random source
@@ -684,15 +717,15 @@ func (a *AddrManager) reset() {
 	}
 }
 
-// HostToNetAddress returns a netaddress given a host address. If the address is
-// a tor .onion address this will be taken care of. else if the host is not an
-// IP address it will be resolved (via tor if required).
+// HostToNetAddress returns a netaddress given a host address.  If the address
+// is a Tor .onion address this will be taken care of.  Else if the host is
+// not an IP address it will be resolved (via Tor if required).
 func (a *AddrManager) HostToNetAddress(host string, port uint16, services wire.ServiceFlag) (*wire.NetAddress, error) {
-	// tor address is 16 char base32 + ".onion"
+	// Tor address is 16 char base32 + ".onion"
 	var ip net.IP
 	if len(host) == 22 && host[16:] == ".onion" {
 		// go base32 encoding uses capitals (as does the rfc
-		// but tor and bitcoind tend to user lowercase, so we switch
+		// but Tor and bitcoind tend to user lowercase, so we switch
 		// case here.
 		data, err := base32.StdEncoding.DecodeString(
 			strings.ToUpper(host[:16]))
@@ -716,11 +749,11 @@ func (a *AddrManager) HostToNetAddress(host string, port uint16, services wire.S
 }
 
 // ipString returns a string for the ip from the provided NetAddress. If the
-// ip is in the range used for tor addresses then it will be transformed into
+// ip is in the range used for Tor addresses then it will be transformed into
 // the relevant .onion address.
 func ipString(na *wire.NetAddress) string {
 	if IsOnionCatTor(na) {
-		// We know now that na.IP is long enogh.
+		// We know now that na.IP is long enough.
 		base32 := base32.StdEncoding.EncodeToString(na.IP[6:])
 		return strings.ToLower(base32) + ".onion"
 	}
@@ -740,7 +773,7 @@ func NetAddressKey(na *wire.NetAddress) string {
 // random one from the possible addresses with preference given to ones that
 // have not been used recently and should not pick 'close' addresses
 // consecutively.
-func (a *AddrManager) GetAddress(class string) *KnownAddress {
+func (a *AddrManager) GetAddress() *KnownAddress {
 	// Protect concurrent access.
 	a.mtx.Lock()
 	defer a.mtx.Unlock()
@@ -882,7 +915,7 @@ func (a *AddrManager) Good(addr *wire.NetAddress) {
 	addrKey := NetAddressKey(addr)
 	oldBucket := -1
 	for i := range a.addrNew {
-		// we check for existance so we can record the first one
+		// we check for existence so we can record the first one
 		if _, ok := a.addrNew[i][addrKey]; ok {
 			delete(a.addrNew[i], addrKey)
 			ka.refs--
@@ -938,6 +971,25 @@ func (a *AddrManager) Good(addr *wire.NetAddress) {
 
 	// We made sure there is space here just above.
 	a.addrNew[newBucket][rmkey] = rmka
+}
+
+// SetServices sets the services for the giiven address to the provided value.
+func (a *AddrManager) SetServices(addr *wire.NetAddress, services wire.ServiceFlag) {
+	a.mtx.Lock()
+	defer a.mtx.Unlock()
+
+	ka := a.find(addr)
+	if ka == nil {
+		return
+	}
+
+	// Update the services if needed.
+	if ka.na.Services != services {
+		// ka.na is immutable, so replace it.
+		naCopy := *ka.na
+		naCopy.Services = services
+		ka.na = &naCopy
+	}
 }
 
 // AddLocalAddress adds na to the list of known local addresses to advertise
@@ -1070,16 +1122,14 @@ func (a *AddrManager) GetBestLocalAddress(remoteAddr *wire.NetAddress) *wire.Net
 			remoteAddr.Port)
 
 		// Send something unroutable if nothing suitable.
-		bestAddress = &wire.NetAddress{
-			Timestamp: time.Now(),
-			Services:  wire.SFNodeNetwork,
-			Port:      0,
-		}
+		var ip net.IP
 		if !IsIPv4(remoteAddr) && !IsOnionCatTor(remoteAddr) {
-			bestAddress.IP = net.IPv6zero
+			ip = net.IPv6zero
 		} else {
-			bestAddress.IP = net.IPv4zero
+			ip = net.IPv4zero
 		}
+		services := wire.SFNodeNetwork | wire.SFNodeWitness | wire.SFNodeBloom
+		bestAddress = wire.NewNetAddressIPPort(ip, 0, services)
 	}
 
 	return bestAddress
@@ -1094,6 +1144,7 @@ func New(dataDir string, lookupFunc func(string) ([]net.IP, error)) *AddrManager
 		rand:           rand.New(rand.NewSource(time.Now().UnixNano())),
 		quit:           make(chan struct{}),
 		localAddresses: make(map[string]*localAddress),
+		version:        serialisationVersion,
 	}
 	am.reset()
 	return &am

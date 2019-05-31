@@ -6,14 +6,16 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
-	flags "github.com/btcsuite/go-flags"
-	"github.com/ppcsuite/btcutil"
-	"github.com/ppcsuite/ppcd/btcjson"
+	"github.com/btcsuite/btcutil"
+	"github.com/gcash/bchd/btcjson"
+	flags "github.com/jessevdk/go-flags"
 )
 
 const (
@@ -173,20 +175,13 @@ func loadConfig() (*config, []string, error) {
 		RPCCert:    defaultRPCCertFile,
 	}
 
-	// Create the home directory if it doesn't already exist.
-	err := os.MkdirAll(btcdHomeDir, 0700)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(-1)
-	}
-
 	// Pre-parse the command line options to see if an alternative config
 	// file, the version flag, or the list commands flag was specified.  Any
 	// errors aside from the help message error can be ignored here since
 	// they will be caught by the final parse below.
 	preCfg := cfg
 	preParser := flags.NewParser(&preCfg, flags.HelpFlag)
-	_, err = preParser.Parse()
+	_, err := preParser.Parse()
 	if err != nil {
 		if e, ok := err.(*flags.Error); ok && e.Type == flags.ErrHelp {
 			fmt.Fprintln(os.Stderr, err)
@@ -213,6 +208,21 @@ func loadConfig() (*config, []string, error) {
 	if preCfg.ListCommands {
 		listCommands()
 		os.Exit(0)
+	}
+
+	if _, err := os.Stat(preCfg.ConfigFile); os.IsNotExist(err) {
+		// Use config file for RPC server to create default btcctl config
+		var serverConfigPath string
+		if preCfg.Wallet {
+			serverConfigPath = filepath.Join(btcwalletHomeDir, "btcwallet.conf")
+		} else {
+			serverConfigPath = filepath.Join(btcdHomeDir, "btcd.conf")
+		}
+
+		err := createDefaultConfigFile(preCfg.ConfigFile, serverConfigPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error creating a default config file: %v\n", err)
+		}
 	}
 
 	// Load additional config from file.
@@ -267,4 +277,73 @@ func loadConfig() (*config, []string, error) {
 		cfg.SimNet, cfg.Wallet)
 
 	return &cfg, remainingArgs, nil
+}
+
+// createDefaultConfig creates a basic config file at the given destination path.
+// For this it tries to read the config file for the RPC server (either btcd or
+// btcwallet), and extract the RPC user and password from it.
+func createDefaultConfigFile(destinationPath, serverConfigPath string) error {
+	// Read the RPC server config
+	serverConfigFile, err := os.Open(serverConfigPath)
+	if err != nil {
+		return err
+	}
+	defer serverConfigFile.Close()
+	content, err := ioutil.ReadAll(serverConfigFile)
+	if err != nil {
+		return err
+	}
+
+	// Extract the rpcuser
+	rpcUserRegexp, err := regexp.Compile(`(?m)^\s*rpcuser=([^\s]+)`)
+	if err != nil {
+		return err
+	}
+	userSubmatches := rpcUserRegexp.FindSubmatch(content)
+	if userSubmatches == nil {
+		// No user found, nothing to do
+		return nil
+	}
+
+	// Extract the rpcpass
+	rpcPassRegexp, err := regexp.Compile(`(?m)^\s*rpcpass=([^\s]+)`)
+	if err != nil {
+		return err
+	}
+	passSubmatches := rpcPassRegexp.FindSubmatch(content)
+	if passSubmatches == nil {
+		// No password found, nothing to do
+		return nil
+	}
+
+	// Extract the notls
+	noTLSRegexp, err := regexp.Compile(`(?m)^\s*notls=(0|1)(?:\s|$)`)
+	if err != nil {
+		return err
+	}
+	noTLSSubmatches := noTLSRegexp.FindSubmatch(content)
+
+	// Create the destination directory if it does not exists
+	err = os.MkdirAll(filepath.Dir(destinationPath), 0700)
+	if err != nil {
+		return err
+	}
+
+	// Create the destination file and write the rpcuser and rpcpass to it
+	dest, err := os.OpenFile(destinationPath,
+		os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return err
+	}
+	defer dest.Close()
+
+	destString := fmt.Sprintf("rpcuser=%s\nrpcpass=%s\n",
+		string(userSubmatches[1]), string(passSubmatches[1]))
+	if noTLSSubmatches != nil {
+		destString += fmt.Sprintf("notls=%s\n", noTLSSubmatches[1])
+	}
+
+	dest.WriteString(destString)
+
+	return nil
 }

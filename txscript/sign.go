@@ -14,16 +14,70 @@ import (
 	"github.com/ppcsuite/ppcd/wire"
 )
 
-// RawTxInSignature returns the serialized ECDSA signature for the input idx of
-// the given transaction, with hashType appended to it.
-func RawTxInSignature(tx *wire.MsgTx, idx int, subScript []byte,
-	hashType SigHashType, key *btcec.PrivateKey) ([]byte, error) {
+// RawTxInWitnessSignature returns the serialized ECDA signature for the input
+// idx of the given transaction, with the hashType appended to it. This
+// function is identical to RawTxInSignature, however the signature generated
+// signs a new sighash digest defined in BIP0143.
+func RawTxInWitnessSignature(tx *wire.MsgTx, sigHashes *TxSigHashes, idx int,
+	amt int64, subScript []byte, hashType SigHashType,
+	key *btcec.PrivateKey) ([]byte, error) {
 
 	parsedScript, err := parseScript(subScript)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse output script: %v", err)
 	}
-	hash := calcSignatureHash(parsedScript, hashType, tx, idx)
+
+	hash, err := calcWitnessSignatureHash(parsedScript, sigHashes, hashType, tx,
+		idx, amt)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := key.Sign(hash)
+	if err != nil {
+		return nil, fmt.Errorf("cannot sign tx input: %s", err)
+	}
+
+	return append(signature.Serialize(), byte(hashType)), nil
+}
+
+// WitnessSignature creates an input witness stack for tx to spend BTC sent
+// from a previous output to the owner of privKey using the p2wkh script
+// template. The passed transaction must contain all the inputs and outputs as
+// dictated by the passed hashType. The signature generated observes the new
+// transaction digest algorithm defined within BIP0143.
+func WitnessSignature(tx *wire.MsgTx, sigHashes *TxSigHashes, idx int, amt int64,
+	subscript []byte, hashType SigHashType, privKey *btcec.PrivateKey,
+	compress bool) (wire.TxWitness, error) {
+
+	sig, err := RawTxInWitnessSignature(tx, sigHashes, idx, amt, subscript,
+		hashType, privKey)
+	if err != nil {
+		return nil, err
+	}
+
+	pk := (*btcec.PublicKey)(&privKey.PublicKey)
+	var pkData []byte
+	if compress {
+		pkData = pk.SerializeCompressed()
+	} else {
+		pkData = pk.SerializeUncompressed()
+	}
+
+	// A witness script is actually a stack, so we return an array of byte
+	// slices here, rather than a single byte slice.
+	return wire.TxWitness{sig, pkData}, nil
+}
+
+// RawTxInSignature returns the serialized ECDSA signature for the input idx of
+// the given transaction, with hashType appended to it.
+func RawTxInSignature(tx *wire.MsgTx, idx int, subScript []byte,
+	hashType SigHashType, key *btcec.PrivateKey) ([]byte, error) {
+
+	hash, err := CalcSignatureHash(subScript, hashType, tx, idx)
+	if err != nil {
+		return nil, err
+	}
 	signature, err := key.Sign(hash)
 	if err != nil {
 		return nil, fmt.Errorf("cannot sign tx input: %s", err)
@@ -168,7 +222,7 @@ func mergeScripts(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 	pkScript []byte, class ScriptClass, addresses []btcutil.Address,
 	nRequired int, sigScript, prevScript []byte) []byte {
 
-	// TODO(oga) the scripthash and multisig paths here are overly
+	// TODO: the scripthash and multisig paths here are overly
 	// inefficient in that they will recompute already known data.
 	// some internal refactoring could probably make this avoid needless
 	// extra calculations.
@@ -190,7 +244,7 @@ func mergeScripts(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 		script := sigPops[len(sigPops)-1].data
 
 		// We already know this information somewhere up the stack.
-		class, addresses, nrequired, err :=
+		class, addresses, nrequired, _ :=
 			ExtractPkScriptAddrs(script, chainParams)
 
 		// regenerate scripts.
@@ -203,7 +257,7 @@ func mergeScripts(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 
 		// Reappend the script and return the result.
 		builder := NewScriptBuilder()
-		builder.script = mergedScript
+		builder.AddOps(mergedScript)
 		builder.AddData(script)
 		finalScript, _ := builder.Script()
 		return finalScript
@@ -211,7 +265,7 @@ func mergeScripts(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 		return mergeMultiSig(tx, idx, addresses, nRequired, pkScript,
 			sigScript, prevScript)
 
-	// It doesn't actualy make sense to merge anything other than multiig
+	// It doesn't actually make sense to merge anything other than multiig
 	// and scripthash (because it could contain multisig). Everything else
 	// has either zero signature, can't be spent, or has a single signature
 	// which is either present or not. The other two cases are handled
@@ -294,7 +348,7 @@ sigLoop:
 		hash := calcSignatureHash(pkPops, hashType, tx, idx)
 
 		for _, addr := range addresses {
-			// All multisig addresses should be pubkey addreses
+			// All multisig addresses should be pubkey addresses
 			// it is an error to call this internal function with
 			// bad input.
 			pkaddr := addr.(*btcutil.AddressPubKey)
@@ -374,7 +428,7 @@ func (sc ScriptClosure) GetScript(address btcutil.Address) ([]byte, error) {
 // looked up by calling getKey() with the string of the given address.
 // Any pay-to-script-hash signatures will be similarly looked up by calling
 // getScript. If previousScript is provided then the results in previousScript
-// will be merged in a type-dependant manner with the newly generated.
+// will be merged in a type-dependent manner with the newly generated.
 // signature script.
 func SignTxOutput(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 	pkScript []byte, hashType SigHashType, kdb KeyDB, sdb ScriptDB,
@@ -394,10 +448,9 @@ func SignTxOutput(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 			return nil, err
 		}
 
-		// This is a bad thing. Append the p2sh script as the last
-		// push in the script.
+		// Append the p2sh script as the last push in the script.
 		builder := NewScriptBuilder()
-		builder.script = realSigScript
+		builder.AddOps(realSigScript)
 		builder.AddData(sigScript)
 
 		sigScript, _ = builder.Script()

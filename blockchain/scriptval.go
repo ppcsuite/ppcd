@@ -1,4 +1,4 @@
-// Copyright (c) 2013-2014 The btcsuite developers
+// Copyright (c) 2013-2016 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"runtime"
+	"time"
 
 	"github.com/ppcsuite/btcutil"
 	"github.com/ppcsuite/ppcd/txscript"
@@ -19,6 +20,7 @@ type txValidateItem struct {
 	txInIndex int
 	txIn      *wire.TxIn
 	tx        *btcutil.Tx
+	sigHashes *txscript.TxSigHashes
 }
 
 // txValidator provides a type which asynchronously validates transaction
@@ -28,13 +30,14 @@ type txValidator struct {
 	validateChan chan *txValidateItem
 	quitChan     chan struct{}
 	resultChan   chan error
-	txStore      TxStore
+	utxoView     *UtxoViewpoint
 	flags        txscript.ScriptFlags
 	sigCache     *txscript.SigCache
+	hashCache    *txscript.HashCache
 }
 
 // sendResult sends the result of a script pair validation on the internal
-// result channel while respecting the quit channel.  The allows orderly
+// result channel while respecting the quit channel.  This allows orderly
 // shutdown when the validation process is aborted early due to a validation
 // error in one of the other goroutines.
 func (v *txValidator) sendResult(result error) {
@@ -52,47 +55,36 @@ out:
 	for {
 		select {
 		case txVI := <-v.validateChan:
-			// Ensure the referenced input transaction is available.
+			// Ensure the referenced input utxo is available.
 			txIn := txVI.txIn
-			originTxHash := &txIn.PreviousOutPoint.Hash
-			originTx, exists := v.txStore[*originTxHash]
-			if !exists || originTx.Err != nil || originTx.Tx == nil {
-				str := fmt.Sprintf("unable to find input "+
-					"transaction %v referenced from "+
-					"transaction %v", originTxHash,
-					txVI.tx.Sha())
-				err := ruleError(ErrMissingTx, str)
-				v.sendResult(err)
-				break out
-			}
-			originMsgTx := originTx.Tx.MsgTx()
-
-			// Ensure the output index in the referenced transaction
-			// is available.
-			originTxIndex := txIn.PreviousOutPoint.Index
-			if originTxIndex >= uint32(len(originMsgTx.TxOut)) {
-				str := fmt.Sprintf("out of bounds "+
-					"input index %d in transaction %v "+
-					"referenced from transaction %v",
-					originTxIndex, originTxHash,
-					txVI.tx.Sha())
-				err := ruleError(ErrBadTxInput, str)
+			utxo := v.utxoView.LookupEntry(txIn.PreviousOutPoint)
+			if utxo == nil {
+				str := fmt.Sprintf("unable to find unspent "+
+					"output %v referenced from "+
+					"transaction %s:%d",
+					txIn.PreviousOutPoint, txVI.tx.Hash(),
+					txVI.txInIndex)
+				err := ruleError(ErrMissingTxOut, str)
 				v.sendResult(err)
 				break out
 			}
 
 			// Create a new script engine for the script pair.
 			sigScript := txIn.SignatureScript
-			pkScript := originMsgTx.TxOut[originTxIndex].PkScript
+			witness := txIn.Witness
+			pkScript := utxo.PkScript()
+			inputAmount := utxo.Amount()
 			vm, err := txscript.NewEngine(pkScript, txVI.tx.MsgTx(),
-				txVI.txInIndex, v.flags, v.sigCache)
+				txVI.txInIndex, v.flags, v.sigCache, txVI.sigHashes,
+				inputAmount)
 			if err != nil {
 				str := fmt.Sprintf("failed to parse input "+
-					"%s:%d which references output %s:%d - "+
-					"%v (input script bytes %x, prev output "+
-					"script bytes %x)", txVI.tx.Sha(),
-					txVI.txInIndex, originTxHash,
-					originTxIndex, err, sigScript, pkScript)
+					"%s:%d which references output %v - "+
+					"%v (input witness %x, input script "+
+					"bytes %x, prev output script bytes %x)",
+					txVI.tx.Hash(), txVI.txInIndex,
+					txIn.PreviousOutPoint, err, witness,
+					sigScript, pkScript)
 				err := ruleError(ErrScriptMalformed, str)
 				v.sendResult(err)
 				break out
@@ -101,11 +93,12 @@ out:
 			// Execute the script pair.
 			if err := vm.Execute(); err != nil {
 				str := fmt.Sprintf("failed to validate input "+
-					"%s:%d which references output %s:%d - "+
-					"%v (input script bytes %x, prev output "+
-					"script bytes %x)", txVI.tx.Sha(),
-					txVI.txInIndex, originTxHash,
-					originTxIndex, err, sigScript, pkScript)
+					"%s:%d which references output %v - "+
+					"%v (input witness %x, input script "+
+					"bytes %x, prev output script bytes %x)",
+					txVI.tx.Hash(), txVI.txInIndex,
+					txIn.PreviousOutPoint, err, witness,
+					sigScript, pkScript)
 				err := ruleError(ErrScriptValidation, str)
 				v.sendResult(err)
 				break out
@@ -128,7 +121,7 @@ func (v *txValidator) Validate(items []*txValidateItem) error {
 	}
 
 	// Limit the number of goroutines to do script validation based on the
-	// number of processor cores.  This help ensure the system stays
+	// number of processor cores.  This helps ensure the system stays
 	// reasonably responsive under heavy load.
 	maxGoRoutines := runtime.NumCPU() * 3
 	if maxGoRoutines <= 0 {
@@ -180,20 +173,47 @@ func (v *txValidator) Validate(items []*txValidateItem) error {
 
 // newTxValidator returns a new instance of txValidator to be used for
 // validating transaction scripts asynchronously.
-func newTxValidator(txStore TxStore, flags txscript.ScriptFlags, sigCache *txscript.SigCache) *txValidator {
+func newTxValidator(utxoView *UtxoViewpoint, flags txscript.ScriptFlags,
+	sigCache *txscript.SigCache, hashCache *txscript.HashCache) *txValidator {
 	return &txValidator{
 		validateChan: make(chan *txValidateItem),
 		quitChan:     make(chan struct{}),
 		resultChan:   make(chan error),
-		txStore:      txStore,
+		utxoView:     utxoView,
 		sigCache:     sigCache,
+		hashCache:    hashCache,
 		flags:        flags,
 	}
 }
 
 // ValidateTransactionScripts validates the scripts for the passed transaction
 // using multiple goroutines.
-func ValidateTransactionScripts(tx *btcutil.Tx, txStore TxStore, flags txscript.ScriptFlags, sigCache *txscript.SigCache) error {
+func ValidateTransactionScripts(tx *btcutil.Tx, utxoView *UtxoViewpoint,
+	flags txscript.ScriptFlags, sigCache *txscript.SigCache,
+	hashCache *txscript.HashCache) error {
+
+	// First determine if segwit is active according to the scriptFlags. If
+	// it isn't then we don't need to interact with the HashCache.
+	segwitActive := flags&txscript.ScriptVerifyWitness == txscript.ScriptVerifyWitness
+
+	// If the hashcache doesn't yet has the sighash midstate for this
+	// transaction, then we'll compute them now so we can re-use them
+	// amongst all worker validation goroutines.
+	if segwitActive && tx.MsgTx().HasWitness() &&
+		!hashCache.ContainsHashes(tx.Hash()) {
+		hashCache.AddSigHashes(tx.MsgTx())
+	}
+
+	var cachedHashes *txscript.TxSigHashes
+	if segwitActive && tx.MsgTx().HasWitness() {
+		// The same pointer to the transaction's sighash midstate will
+		// be re-used amongst all validation goroutines. By
+		// pre-computing the sighash here instead of during validation,
+		// we ensure the sighashes
+		// are only computed once.
+		cachedHashes, _ = hashCache.GetSigHashes(tx.Hash())
+	}
+
 	// Collect all of the transaction inputs and required information for
 	// validation.
 	txIns := tx.MsgTx().TxIn
@@ -208,23 +228,25 @@ func ValidateTransactionScripts(tx *btcutil.Tx, txStore TxStore, flags txscript.
 			txInIndex: txInIdx,
 			txIn:      txIn,
 			tx:        tx,
+			sigHashes: cachedHashes,
 		}
 		txValItems = append(txValItems, txVI)
 	}
 
 	// Validate all of the inputs.
-	validator := newTxValidator(txStore, flags, sigCache)
-	if err := validator.Validate(txValItems); err != nil {
-		return err
-	}
-
-	return nil
+	validator := newTxValidator(utxoView, flags, sigCache, hashCache)
+	return validator.Validate(txValItems)
 }
 
 // checkBlockScripts executes and validates the scripts for all transactions in
-// the passed block.
-func checkBlockScripts(block *btcutil.Block, txStore TxStore,
-	scriptFlags txscript.ScriptFlags, sigCache *txscript.SigCache) error {
+// the passed block using multiple goroutines.
+func checkBlockScripts(block *btcutil.Block, utxoView *UtxoViewpoint,
+	scriptFlags txscript.ScriptFlags, sigCache *txscript.SigCache,
+	hashCache *txscript.HashCache) error {
+
+	// First determine if segwit is active according to the scriptFlags. If
+	// it isn't then we don't need to interact with the HashCache.
+	segwitActive := scriptFlags&txscript.ScriptVerifyWitness == txscript.ScriptVerifyWitness
 
 	// Collect all of the transaction inputs and required information for
 	// validation for all transactions in the block into a single slice.
@@ -234,6 +256,28 @@ func checkBlockScripts(block *btcutil.Block, txStore TxStore,
 	}
 	txValItems := make([]*txValidateItem, 0, numInputs)
 	for _, tx := range block.Transactions() {
+		hash := tx.Hash()
+
+		// If the HashCache is present, and it doesn't yet contain the
+		// partial sighashes for this transaction, then we add the
+		// sighashes for the transaction. This allows us to take
+		// advantage of the potential speed savings due to the new
+		// digest algorithm (BIP0143).
+		if segwitActive && tx.HasWitness() && hashCache != nil &&
+			!hashCache.ContainsHashes(hash) {
+
+			hashCache.AddSigHashes(tx.MsgTx())
+		}
+
+		var cachedHashes *txscript.TxSigHashes
+		if segwitActive && tx.HasWitness() {
+			if hashCache != nil {
+				cachedHashes, _ = hashCache.GetSigHashes(hash)
+			} else {
+				cachedHashes = txscript.NewTxSigHashes(tx.MsgTx())
+			}
+		}
+
 		for txInIdx, txIn := range tx.MsgTx().TxIn {
 			// Skip coinbases.
 			if txIn.PreviousOutPoint.Index == math.MaxUint32 {
@@ -244,15 +288,31 @@ func checkBlockScripts(block *btcutil.Block, txStore TxStore,
 				txInIndex: txInIdx,
 				txIn:      txIn,
 				tx:        tx,
+				sigHashes: cachedHashes,
 			}
 			txValItems = append(txValItems, txVI)
 		}
 	}
 
 	// Validate all of the inputs.
-	validator := newTxValidator(txStore, scriptFlags, sigCache)
+	validator := newTxValidator(utxoView, scriptFlags, sigCache, hashCache)
+	start := time.Now()
 	if err := validator.Validate(txValItems); err != nil {
 		return err
+	}
+	elapsed := time.Since(start)
+
+	log.Tracef("block %v took %v to verify", block.Hash(), elapsed)
+
+	// If the HashCache is present, once we have validated the block, we no
+	// longer need the cached hashes for these transactions, so we purge
+	// them from the cache.
+	if segwitActive && hashCache != nil {
+		for _, tx := range block.Transactions() {
+			if tx.MsgTx().HasWitness() {
+				hashCache.PurgeSigHashes(tx.Hash())
+			}
+		}
 	}
 
 	return nil
