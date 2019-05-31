@@ -6,10 +6,10 @@ chaincfg
 [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/github.com/btcsuite/btcd/chaincfg)
 
 Package chaincfg defines chain configuration parameters for the three standard
-Bitcoin networks and provides the ability for callers to define their own custom
-Bitcoin networks.
+Peercoin networks and provides the ability for callers to define their own custom
+Bitcoin-based networks.
 
-Although this package was primarily written for btcd, it has intentionally been
+Although this package was primarily written for ppcd, it has intentionally been
 designed so it can be used as a standalone package for any projects needing to
 use parameters for the standard Bitcoin networks or for projects needing to
 define their own network.
@@ -24,28 +24,28 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/ppcsuite/ppcutil"
 	"github.com/ppcsuite/ppcd/chaincfg"
-	"github.com/mably/btcutil"
 )
 
-var testnet = flag.Bool("testnet", false, "operate on the testnet Bitcoin network")
+var testnet = flag.Bool("testnet", false, "operate on the testnet Peercoin network")
 
 // By default (without -testnet), use mainnet.
-var netParams = &chaincfg.MainNetParams
+var chainParams = &chaincfg.MainNetParams
 
 func main() {
 	flag.Parse()
 
 	// Modify active network parameters if operating on testnet.
 	if *testnet {
-		netParams = &chaincfg.TestNet3Params
+		chainParams = &chaincfg.TestNetParams
 	}
 
 	// later...
 
 	// Create and print new payment address, specific to the active network.
 	pubKeyHash := make([]byte, 20)
-	addr, err := btcutil.NewAddressPubKeyHash(pubKeyHash, netParams)
+	addr, err := btcutil.NewAddressPubKeyHash(pubKeyHash, chainParams)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -53,23 +53,10 @@ func main() {
 }
 ```
 
-## Documentation
-
-[![GoDoc](https://godoc.org/github.com/ppcsuite/ppcd/chaincfg?status.png)]
-(http://godoc.org/github.com/ppcsuite/ppcd/chaincfg)
-
-Full `go doc` style documentation for the project can be viewed online without
-installing this package by using the GoDoc site
-[here](http://godoc.org/github.com/ppcsuite/ppcd/chaincfg).
-
-You can also view the documentation locally once the package is installed with
-the `godoc` tool by running `godoc -http=":6060"` and pointing your browser to
-http://localhost:6060/pkg/github.com/ppcsuite/ppcd/chaincfg
-
-## Installation
+## Installation and Updating
 
 ```bash
-$ go get github.com/ppcsuite/ppcd/chaincfg
+$ go get -u github.com/ppcsuite/ppcd/chaincfg
 ```
 
 ## GPG Verification Key
