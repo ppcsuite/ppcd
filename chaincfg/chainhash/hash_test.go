@@ -8,11 +8,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"testing"
-<<<<<<< ours:wire/shahash_test.go
-
-	"github.com/ppcsuite/ppcd/wire"
-=======
->>>>>>> theirs:chaincfg/chainhash/hash_test.go
 )
 
 // mainNetGenesisHash is the hash of the first block in the block chain for the
