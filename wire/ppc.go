@@ -8,17 +8,19 @@ import (
 	"encoding/binary"
 	"io"
 	"math/big"
+
+	"github.com/ppcsuite/ppcd/chaincfg/chainhash"
 )
 
 // Obsolete: maximum size for mined blocks
 const MaxBlockPayloadGen = MaxBlockPayload / 2
 
-var ZeroSha = ShaHash{}
+var ZeroSha = chainhash.Hash{}
 
 type Meta struct {
 	StakeModifier         uint64
 	StakeModifierChecksum uint32 // checksum of index; in-memeory only (main.h)
-	HashProofOfStake      ShaHash
+	HashProofOfStake      chainhash.Hash
 	Flags                 uint32
 	ChainTrust            big.Int
 	Mint                  int64
@@ -138,7 +140,7 @@ func (m *Meta) Deserialize(r io.Reader) error {
 // ppc: the coin stake transaction is marked with the first output empty
 func (msg *MsgTx) IsCoinStake() bool {
 	return len(msg.TxIn) > 0 &&
-		(!(msg.TxIn[0].PreviousOutPoint.Hash.IsEqual(&ShaHash{}) &&
+		(!(msg.TxIn[0].PreviousOutPoint.Hash.IsEqual(&chainhash.Hash{}) &&
 			msg.TxIn[0].PreviousOutPoint.Index == MaxPrevOutIndex)) &&
 		len(msg.TxOut) >= 2 &&
 		(msg.TxOut[0].Value == 0 && len(msg.TxOut[0].PkScript) == 0)
@@ -164,7 +166,7 @@ func (msg *MsgBlock) IsProofOfStake() bool {
 func (m *Meta) GetSerializedSize() int {
 	return 8 + // StakeModifier uint64
 		4 + // StakeModifierChecksum uint32
-		32 + // HashProofOfStake ShaHash
+		32 + // HashProofOfStake chainhash.Hash
 		4 + // Flags uint32
 		1 + len(m.ChainTrust.Bytes()) + //ChainTrust big.Int
 		8 + // Mint int64
