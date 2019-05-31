@@ -10,7 +10,7 @@ import (
 
 	"github.com/ppcsuite/ppcd/chaincfg/chainhash"
 	"github.com/ppcsuite/ppcd/database"
-	"github.com/ppcsuite/ppcutil"
+	"github.com/ppcsuite/btcutil"
 )
 
 // BehaviorFlags is a bitmask defining tweaks to the normal behavior when

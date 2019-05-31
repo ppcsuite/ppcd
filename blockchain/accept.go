@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/ppcsuite/ppcd/database"
-	"github.com/ppcsuite/ppcutil"
+	"github.com/ppcsuite/btcutil"
 )
 
 // maybeAcceptBlock potentially accepts a block into the block chain and, if

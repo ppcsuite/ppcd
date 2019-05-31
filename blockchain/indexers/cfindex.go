@@ -8,13 +8,13 @@ import (
 	"errors"
 
 	"github.com/btcsuite/btcutil"
+	"github.com/ppcsuite/btcutil/gcs"
+	"github.com/ppcsuite/btcutil/gcs/builder"
 	"github.com/ppcsuite/ppcd/blockchain"
 	"github.com/ppcsuite/ppcd/chaincfg"
 	"github.com/ppcsuite/ppcd/chaincfg/chainhash"
 	"github.com/ppcsuite/ppcd/database"
 	"github.com/ppcsuite/ppcd/wire"
-	"github.com/ppcsuite/ppcutil/gcs"
-	"github.com/ppcsuite/ppcutil/gcs/builder"
 )
 
 const (

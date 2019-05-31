@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/ppcsuite/ppcutil"
+	"github.com/ppcsuite/btcutil"
 	"github.com/ppcsuite/ppcd/chaincfg"
 )
 

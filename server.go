@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/btcsuite/btcutil"
+	"github.com/ppcsuite/btcutil/bloom"
 	"github.com/ppcsuite/ppcd/addrmgr"
 	"github.com/ppcsuite/ppcd/blockchain"
 	"github.com/ppcsuite/ppcd/blockchain/indexers"
@@ -37,7 +38,6 @@ import (
 	"github.com/ppcsuite/ppcd/peer"
 	"github.com/ppcsuite/ppcd/txscript"
 	"github.com/ppcsuite/ppcd/wire"
-	"github.com/ppcsuite/ppcutil/bloom"
 )
 
 const (
