@@ -16,6 +16,7 @@
 6.2. [Licensing of Contributions](#Licensing)<br />
 
 <a name="Overview" />
+
 ### 1. Overview
 
 Developing cryptocurrencies is an exciting endeavor that touches a wide variety
@@ -38,6 +39,7 @@ We highly encourage code contributions, however it is imperative that you adhere
 to the guidelines established on this page.
 
 <a name="MinSkillset" />
+
 ### 2. Minimum Recommended Skillset
 
 The following list is a set of core competencies that we recommend you possess
@@ -63,15 +65,17 @@ understanding of the various aspects involved with cryptography such as the
 security and performance implications.
 
 <a name="ReqReading" />
+
 ### 3. Required Reading
 
 - [Effective Go](http://golang.org/doc/effective_go.html) - The entire btcd
   suite follows the guidelines in this document.  For your code to be accepted,
-  it must follow the guidelinestherein.
+  it must follow the guidelines therein.
 - [Original Satoshi Whitepaper](http://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&ved=0CCkQFjAA&url=http%3A%2F%2Fbitcoin.org%2Fbitcoin.pdf&ei=os3VUuH8G4SlsASV74GoAg&usg=AFQjCNEipPLigou_1MfB7DQjXCNdlylrBg&sig2=FaHDuT5z36GMWDEnybDJLg&bvm=bv.59378465,d.b2I) - This is the white paper that started it all.  Having a solid
   foundation to build on will make the code much more comprehensible.
 
 <a name="DevelopmentPractices" />
+
 ### 4. Development Practices
 
 Developers are expected to work in their own trees and submit pull requests when
@@ -79,6 +83,7 @@ they feel their feature or bug fix is ready for integration into the  master
 branch.
 
 <a name="ShareEarly" />
+
 ### 4.1 Share Early, Share Often
 
 We firmly believe in the share early, share often approach.  The basic premise
@@ -101,6 +106,7 @@ This approach has several benefits:
   spend rebasing and otherwise trying to keep up with the main code base
 
 <a name="Testing" />
+
 ### 4.2 Testing
 
 One of the major design goals of all core btcd packages is to aim for complete
@@ -127,6 +133,7 @@ A quick summary of test practices follows:
   to both prove it has been resolved and to prevent future regressions
 
 <a name="CodeDocumentation" />
+
 ### 4.3 Code Documentation and Commenting
 
 - At a minimum every function must be commented with its intended purpose and
@@ -196,7 +203,8 @@ but it was left as a magic number to show how much of a difference a good
 comment can make.
 
 <a name="ModelGitCommitMessages" />
-### 4.4 Code Documentation and Commenting
+
+### 4.4 Model Git Commit Messages
 
 This project prefers to keep a clean commit history with well-formed commit
 messages.  This section illustrates a model commit message and provides a bit
@@ -228,6 +236,12 @@ Further paragraphs come after blank lines.
 - Use a hanging indent
 ```
 
+Prefix the summary with the subsystem/package when possible. Many other
+projects make use of the code and this makes it easier for them to tell when
+something they're using has changed. Have a look at [past
+commits](https://github.com/btcsuite/btcd/commits/master) for examples of
+commit messages.
+
 Here are some of the reasons why wrapping your commit messages to 72 columns is
 a good thing.
 
@@ -242,12 +256,14 @@ a good thing.
   reply indicators without overflow in an 80 column terminal.
 
 <a name="CodeApproval" />
+
 ### 5. Code Approval Process
 
 This section describes the code approval process that is used for code
 contributions.  This is how to get your changes into btcd.
 
 <a name="CodeReview" />
+
 ### 5.1 Code Review
 
 All code which is submitted will need to be reviewed before inclusion into the
@@ -283,6 +299,7 @@ checks which are generally performed as follows:
   consensus
 
 <a name="CodeRework" />
+
 ### 5.2 Rework Code (if needed)
 
 After the code review, the change will be accepted immediately if no issues are
@@ -295,6 +312,7 @@ make the necessary changes.
 This process will continue until the code is finally accepted.
 
 <a name="CodeAcceptance" />
+
 ### 5.3 Acceptance
 
 Once your code is accepted, it will be integrated with the master branch.
@@ -306,9 +324,11 @@ the master branch and the pull request will be closed.
 Rejoice as you will now be listed as a [contributor](https://github.com/ppcsuite/ppcd/graphs/contributors)!
 
 <a name="Standards" />
+
 ### 6. Contribution Standards
 
 <a name="Checklist" />
+
 ### 6.1. Contribution Checklist
 
 - [&nbsp;&nbsp;] All changes are Go version 1.3 compliant
@@ -327,8 +347,9 @@ Rejoice as you will now be listed as a [contributor](https://github.com/ppcsuite
   report any **new** issues that did not already exist
 
 <a name="Licensing" />
+
 ### 6.2. Licensing of Contributions
-****
+
 All contributions must be licensed with the
 [ISC license](https://github.com/ppcsuite/ppcd/blob/master/LICENSE).  This is
 the same license as all of the code in the btcd suite.

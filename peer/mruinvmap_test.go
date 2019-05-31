@@ -1,4 +1,4 @@
-// Copyright (c) 2013-2015 The btcsuite developers
+// Copyright (c) 2013-2016 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 )
 
@@ -21,7 +22,7 @@ func TestMruInventoryMap(t *testing.T) {
 	numInvVects := 10
 	invVects := make([]*wire.InvVect, 0, numInvVects)
 	for i := 0; i < numInvVects; i++ {
-		hash := &wire.ShaHash{byte(i)}
+		hash := &chainhash.Hash{byte(i)}
 		iv := wire.NewInvVect(wire.InvTypeBlock, hash)
 		invVects = append(invVects, iv)
 	}
@@ -44,7 +45,7 @@ testLoop:
 		// limit and add all of the test inventory vectors.  This will
 		// cause evicition since there are more test inventory vectors
 		// than the limits.
-		mruInvMap := NewMruInventoryMap(uint(test.limit))
+		mruInvMap := newMruInventoryMap(uint(test.limit))
 		for j := 0; j < numInvVects; j++ {
 			mruInvMap.Add(invVects[j])
 		}
@@ -81,7 +82,7 @@ testLoop:
 			mruInvMap.Add(invVects[origLruIndex])
 
 			iv := wire.NewInvVect(wire.InvTypeBlock,
-				&wire.ShaHash{0x00, 0x01})
+				&chainhash.Hash{0x00, 0x01})
 			mruInvMap.Add(iv)
 
 			// Ensure the original lru entry still exists since it
@@ -121,13 +122,13 @@ testLoop:
 func TestMruInventoryMapStringer(t *testing.T) {
 	// Create a couple of fake inventory vectors to use in testing the mru
 	// inventory stringer code.
-	hash1 := &wire.ShaHash{0x01}
-	hash2 := &wire.ShaHash{0x02}
+	hash1 := &chainhash.Hash{0x01}
+	hash2 := &chainhash.Hash{0x02}
 	iv1 := wire.NewInvVect(wire.InvTypeBlock, hash1)
 	iv2 := wire.NewInvVect(wire.InvTypeBlock, hash2)
 
 	// Create new mru inventory map and add the inventory vectors.
-	mruInvMap := NewMruInventoryMap(uint(2))
+	mruInvMap := newMruInventoryMap(uint(2))
 	mruInvMap.Add(iv1)
 	mruInvMap.Add(iv2)
 
@@ -152,9 +153,9 @@ func BenchmarkMruInventoryList(b *testing.B) {
 	numInvVects := 100000
 	invVects := make([]*wire.InvVect, 0, numInvVects)
 	for i := 0; i < numInvVects; i++ {
-		hashBytes := make([]byte, wire.HashSize)
+		hashBytes := make([]byte, chainhash.HashSize)
 		rand.Read(hashBytes)
-		hash, _ := wire.NewShaHash(hashBytes)
+		hash, _ := chainhash.NewHash(hashBytes)
 		iv := wire.NewInvVect(wire.InvTypeBlock, hash)
 		invVects = append(invVects, iv)
 	}
@@ -162,7 +163,7 @@ func BenchmarkMruInventoryList(b *testing.B) {
 
 	// Benchmark the add plus evicition code.
 	limit := 20000
-	mruInvMap := NewMruInventoryMap(uint(limit))
+	mruInvMap := newMruInventoryMap(uint(limit))
 	for i := 0; i < b.N; i++ {
 		mruInvMap.Add(invVects[i%numInvVects])
 	}

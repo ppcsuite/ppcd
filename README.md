@@ -6,17 +6,22 @@ ppcd
 
 ppcd is an alternative full node peercoin implementation written in Go (golang) based on Conformal btcd code.
 
-This project is currently under active development and not usable in production.
+This project is currently under active development and is in a Beta state.  It
+is extremely stable and has been in production use since October 2013.
 
 It properly downloads, validates, and serves the block chain using the exact
-rules (including bugs) for block acceptance as Peercoin Core.  We have taken
-great care to avoid ppcd causing a fork to the block chain.
+rules (including consensus bugs) for block acceptance as Bitcoin Core.  We have
+taken great care to avoid btcd causing a fork to the block chain.  It includes a
+full block validation testing framework which contains all of the 'official'
+block acceptance tests (and some additional ones) that is run on every pull
+request to help ensure it properly follows consensus.  Also, it passes all of
+the JSON test data in the Bitcoin Core code.
 
-It also relays newly mined/minted blocks, maintains a transaction pool, and
-relays individual transactions that have not yet made it into a block.  It ensures
-all transactions admitted to the pool follow the rules required by the block chain
-and also includes the same checks which filter transactions based on
-miner/minter requirements ("standard" transactions) as Peercoin Core.
+It also properly relays newly mined blocks, maintains a transaction pool, and
+relays individual transactions that have not yet made it into a block.  It
+ensures all individual transactions admitted to the pool follow the rules
+required by the block chain and also includes more strict checks which filter
+transactions based on miner requirements ("standard" transactions).
 
 One key difference between ppcd and Peercoin Core is that ppcd does *NOT* include
 wallet functionality and this was a very intentional design decision.  See the
@@ -24,12 +29,12 @@ blog entry [here](https://blog.conformal.com/btcd-not-your-moms-bitcoin-daemon)
 for more details.  This means you can't actually make or receive payments
 directly with btcd.  That functionality is provided by the
 [btcwallet](https://github.com/btcsuite/btcwallet) and
-[btcgui](https://github.com/btcsuite/btcgui) projects which are both under
-active development.
+[Paymetheus](https://github.com/btcsuite/Paymetheus) (Windows-only) projects
+which are both under active development.
 
 ## Requirements
 
-[Go](http://golang.org) 1.3 or newer.
+[Go](http://golang.org) 1.11 or newer.
 
 ## Installation
 
@@ -51,19 +56,19 @@ $ go env GOROOT GOPATH
 
 NOTE: The `GOROOT` and `GOPATH` above must not be the same path.  It is
 recommended that `GOPATH` is set to a directory in your home directory such as
-`~/goprojects` to avoid write permission issues.
+`~/goprojects` to avoid write permission issues.  It is also recommended to add
+`$GOPATH/bin` to your `PATH` at this point.
 
-- Run the following command to obtain btcd, all dependencies, and install it:
-```$ go get github.com/ppcsuite/ppcd/...```
+- Run the following commands to obtain btcd, all dependencies, and install it:
 
 ```bash
-$ go get github.com/ppcsuite/ppcd/...
+$ cd $GOPATH/src/github.com/ppcsuite/ppcd
+$ GO111MODULE=on go install -v . ./cmd/...
 ```
 
-- btcd (and utilities) will now be installed in either ```$GOROOT/bin``` or
-```$GOPATH/bin``` depending on your configuration.  If you did not already
-add the bin directory to your system path during Go installation, we
-recommend you do so now.
+- ppcd (and utilities) will now be installed in ```$GOPATH/bin```.  If you did
+  not already add the bin directory to your system path during Go installation,
+  we recommend you do so now.
 
 ## Updating
 
@@ -73,11 +78,12 @@ Install a newer MSI
 
 #### Linux/BSD/MacOSX/POSIX - Build from Source
 
-- Run the following command to update btcd, all dependencies, and install it:
-```$ go get -u -v github.com/ppcsuite/ppcd/...```
+- Run the following commands to update btcd, all dependencies, and install it:
 
 ```bash
-$ go get -u -v github.com/ppcsuite/ppcd/...
+$ cd $GOPATH/src/github.com/btcsuite/btcd
+$ git pull
+$ GO111MODULE=on go install -v . ./cmd/...
 ```
 
 ## Getting Started
@@ -102,10 +108,6 @@ $ ./ppcd
 - channel #ppcd
 - [webchat](https://webchat.freenode.net/?channels=btcd)
 
-## Forum
-
-- http://www.peercointalk.org
-
 ## Issue Tracker
 
 The [integrated github issue tracker](https://github.com/ppcsuite/ppcd/issues)
@@ -121,8 +123,8 @@ All official release tags are signed by Conformal so users can ensure the code
 has not been tampered with and is coming from the btcsuite developers.  To
 verify the signature perform the following:
 
-- Download the public key from the Conformal website at
-https://opensource.conformal.com/GIT-GPG-KEY-conformal.txt
+- Download the Conformal public key:
+  https://raw.githubusercontent.com/btcsuite/btcd/master/release/GIT-GPG-KEY-conformal.txt
 
 - Import the public key into your GPG keyring:
 ```bash

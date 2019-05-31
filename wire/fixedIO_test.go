@@ -1,8 +1,8 @@
-// Copyright (c) 2013-2015 The btcsuite developers
+// Copyright (c) 2013-2016 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package wire_test
+package wire
 
 import (
 	"bytes"
@@ -31,7 +31,7 @@ func (w *fixedWriter) Write(p []byte) (n int, err error) {
 	return
 }
 
-// Bytes returns the bytes alreayd written to the fixed writer.
+// Bytes returns the bytes already written to the fixed writer.
 func (w *fixedWriter) Bytes() []byte {
 	return w.b
 }
@@ -39,7 +39,7 @@ func (w *fixedWriter) Bytes() []byte {
 // newFixedWriter returns a new io.Writer that will error once more bytes than
 // the specified max have been written.
 func newFixedWriter(max int) io.Writer {
-	b := make([]byte, max, max)
+	b := make([]byte, max)
 	fw := fixedWriter{b, 0}
 	return &fw
 }
@@ -66,7 +66,7 @@ func (fr *fixedReader) Read(p []byte) (n int, err error) {
 // newFixedReader returns a new io.Reader that will error once more bytes than
 // the specified max have been read.
 func newFixedReader(max int, buf []byte) io.Reader {
-	b := make([]byte, max, max)
+	b := make([]byte, max)
 	if buf != nil {
 		copy(b[:], buf)
 	}

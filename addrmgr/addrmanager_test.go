@@ -16,7 +16,7 @@ import (
 	"github.com/ppcsuite/ppcd/wire"
 )
 
-// naTest is used to describe a test to be perfomed against the NetAddressKey
+// naTest is used to describe a test to be performed against the NetAddressKey
 // method.
 type naTest struct {
 	in   wire.NetAddress
@@ -93,12 +93,7 @@ func addNaTests() {
 
 func addNaTest(ip string, port uint16, want string) {
 	nip := net.ParseIP(ip)
-	na := wire.NetAddress{
-		Timestamp: time.Now(),
-		Services:  wire.SFNodeNetwork,
-		IP:        nip,
-		Port:      port,
-	}
+	na := *wire.NewNetAddressIPPort(nip, port, wire.SFNodeNetwork)
 	test := naTest{na, want}
 	naTests = append(naTests, test)
 }
@@ -221,7 +216,7 @@ func TestAttempt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Adding address failed: %v", err)
 	}
-	ka := n.GetAddress("any")
+	ka := n.GetAddress()
 
 	if !ka.LastAttempt().IsZero() {
 		t.Errorf("Address should not have attempts, but does")
@@ -243,9 +238,10 @@ func TestConnected(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Adding address failed: %v", err)
 	}
-	ka := n.GetAddress("any")
+	ka := n.GetAddress()
 	na := ka.NetAddress()
-	na.Timestamp = time.Now().Add(time.Hour * -1) // make it an hour ago
+	// make it an hour ago
+	na.Timestamp = time.Unix(time.Now().Add(time.Hour*-1).Unix(), 0)
 
 	n.Connected(na)
 
@@ -258,27 +254,21 @@ func TestNeedMoreAddresses(t *testing.T) {
 	n := addrmgr.New("testneedmoreaddresses", lookupFunc)
 	addrsToAdd := 1500
 	b := n.NeedMoreAddresses()
-	if b == false {
+	if !b {
 		t.Errorf("Expected that we need more addresses")
 	}
 	addrs := make([]*wire.NetAddress, addrsToAdd)
-	now := time.Now()
 
 	var err error
 	for i := 0; i < addrsToAdd; i++ {
 		s := fmt.Sprintf("%d.%d.173.147:8333", i/128+60, i%128+60)
-		addrs[i], err = n.DeserializeNetAddress(s)
+		addrs[i], err = n.DeserializeNetAddress(s, wire.SFNodeNetwork)
 		if err != nil {
 			t.Errorf("Failed to turn %s into an address: %v", s, err)
 		}
 	}
 
-	srcAddr := &wire.NetAddress{
-		Timestamp: now,
-		Services:  0,
-		IP:        net.IPv4(173, 144, 173, 111),
-		Port:      8333,
-	}
+	srcAddr := wire.NewNetAddressIPPort(net.IPv4(173, 144, 173, 111), 8333, 0)
 
 	n.AddAddresses(addrs, srcAddr)
 	numAddrs := n.NumAddresses()
@@ -287,7 +277,7 @@ func TestNeedMoreAddresses(t *testing.T) {
 	}
 
 	b = n.NeedMoreAddresses()
-	if b == true {
+	if b {
 		t.Errorf("Expected that we don't need more addresses")
 	}
 }
@@ -296,23 +286,17 @@ func TestGood(t *testing.T) {
 	n := addrmgr.New("testgood", lookupFunc)
 	addrsToAdd := 64 * 64
 	addrs := make([]*wire.NetAddress, addrsToAdd)
-	now := time.Now()
 
 	var err error
 	for i := 0; i < addrsToAdd; i++ {
 		s := fmt.Sprintf("%d.173.147.%d:8333", i/64+60, i%64+60)
-		addrs[i], err = n.DeserializeNetAddress(s)
+		addrs[i], err = n.DeserializeNetAddress(s, wire.SFNodeNetwork)
 		if err != nil {
 			t.Errorf("Failed to turn %s into an address: %v", s, err)
 		}
 	}
 
-	srcAddr := &wire.NetAddress{
-		Timestamp: now,
-		Services:  0,
-		IP:        net.IPv4(173, 144, 173, 111),
-		Port:      8333,
-	}
+	srcAddr := wire.NewNetAddressIPPort(net.IPv4(173, 144, 173, 111), 8333, 0)
 
 	n.AddAddresses(addrs, srcAddr)
 	for _, addr := range addrs {
@@ -334,7 +318,7 @@ func TestGetAddress(t *testing.T) {
 	n := addrmgr.New("testgetaddress", lookupFunc)
 
 	// Get an address from an empty set (should error)
-	if rv := n.GetAddress("any"); rv != nil {
+	if rv := n.GetAddress(); rv != nil {
 		t.Errorf("GetAddress failed: got: %v want: %v\n", rv, nil)
 	}
 
@@ -343,7 +327,7 @@ func TestGetAddress(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Adding address failed: %v", err)
 	}
-	ka := n.GetAddress("any")
+	ka := n.GetAddress()
 	if ka == nil {
 		t.Fatalf("Did not get an address where there is one in the pool")
 	}
@@ -353,7 +337,7 @@ func TestGetAddress(t *testing.T) {
 
 	// Mark this as a good address and get it
 	n.Good(ka.NetAddress())
-	ka = n.GetAddress("any")
+	ka = n.GetAddress()
 	if ka == nil {
 		t.Fatalf("Did not get an address where there is one in the pool")
 	}
@@ -457,7 +441,7 @@ func TestGetBestLocalAddress(t *testing.T) {
 		}
 	}
 	/*
-		// Add a tor generated IP address
+		// Add a Tor generated IP address
 		localAddr = wire.NetAddress{IP: net.ParseIP("fd87:d87e:eb43:25::1")}
 		amgr.AddLocalAddress(&localAddr, addrmgr.ManualPrio)
 

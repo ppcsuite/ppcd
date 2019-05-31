@@ -45,6 +45,7 @@ const (
 const (
 	ErrRPCClientNotConnected      RPCErrorCode = -9
 	ErrRPCClientInInitialDownload RPCErrorCode = -10
+	ErrRPCClientNodeNotAdded      RPCErrorCode = -24
 )
 
 // Wallet JSON errors
@@ -70,10 +71,14 @@ const (
 	ErrRPCDifficulty        RPCErrorCode = -5
 	ErrRPCOutOfRange        RPCErrorCode = -1
 	ErrRPCNoTxInfo          RPCErrorCode = -5
+	ErrRPCNoCFIndex         RPCErrorCode = -5
 	ErrRPCNoNewestBlockInfo RPCErrorCode = -5
 	ErrRPCInvalidTxVout     RPCErrorCode = -5
 	ErrRPCRawTxString       RPCErrorCode = -32602
 	ErrRPCDecodeHexString   RPCErrorCode = -22
+	ErrRPCTxError           RPCErrorCode = -25
+	ErrRPCTxRejected        RPCErrorCode = -26
+	ErrRPCTxAlreadyInChain  RPCErrorCode = -27
 )
 
 // Errors that are specific to btcd.

@@ -1,8 +1,9 @@
 txscript
 ========
 
-[![Build Status](https://travis-ci.org/ppcsuite/ppcd.png?branch=master)]
-(https://travis-ci.org/ppcsuite/ppcd)
+[![Build Status](https://travis-ci.org/btcsuite/btcd.png?branch=master)](https://travis-ci.org/btcsuite/btcd)
+[![ISC License](http://img.shields.io/badge/license-ISC-blue.svg)](http://copyfree.org)
+[![GoDoc](https://godoc.org/github.com/btcsuite/btcd/txscript?status.png)](http://godoc.org/github.com/btcsuite/btcd/txscript)
 
 Package txscript implements the bitcoin transaction script language.  There is
 a comprehensive test suite.
@@ -12,7 +13,7 @@ package for any projects needing to use or validate bitcoin transaction scripts.
 
 ## Bitcoin Scripts
 
-Bitcoin provides a stack-based, FORTH-like langauge for the scripts in
+Bitcoin provides a stack-based, FORTH-like language for the scripts in
 the bitcoin transactions.  This language is not turing complete
 although it is still fairly powerful.  A description of the language
 can be found at https://en.bitcoin.it/wiki/Script
@@ -38,18 +39,15 @@ $ go get github.com/ppcsuite/ppcd/txscript
 
 ## Examples
 
-* [Standard Pay-to-pubkey-hash Script]
-  (http://godoc.org/github.com/ppcsuite/ppcd/txscript#example-PayToAddrScript)  
+* [Standard Pay-to-pubkey-hash Script](http://godoc.org/github.com/btcsuite/btcd/txscript#example-PayToAddrScript)  
   Demonstrates creating a script which pays to a bitcoin address.  It also
   prints the created script hex and uses the DisasmString function to display
   the disassembled script.
 
-* [Extracting Details from Standard Scripts]
-  (http://godoc.org/github.com/ppcsuite/ppcd/txscript#example-ExtractPkScriptAddrs)  
+* [Extracting Details from Standard Scripts](http://godoc.org/github.com/btcsuite/btcd/txscript#example-ExtractPkScriptAddrs)  
   Demonstrates extracting information from a standard public key script.
 
-* [Manually Signing a Transaction Output]
-  (http://godoc.org/github.com/ppcsuite/ppcd/txscript#example-SignTxOutput)  
+* [Manually Signing a Transaction Output](http://godoc.org/github.com/btcsuite/btcd/txscript#example-SignTxOutput)  
   Demonstrates manually creating and signing a redeem transaction.
 
 ## GPG Verification Key

@@ -1,16 +1,15 @@
-// Copyright (c) 2013-2015 The btcsuite developers
+// Copyright (c) 2013-2017 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package blockchain_test
+package blockchain
 
 import (
 	"fmt"
 	"runtime"
 	"testing"
 
-	"github.com/ppcsuite/ppcd/blockchain"
-	"github.com/ppcsuite/ppcd/txscript"
+	"github.com/ppcsuite/btcd/txscript"
 )
 
 // TestCheckBlockScripts ensures that validating the all of the scripts in a
@@ -27,20 +26,24 @@ func TestCheckBlockScripts(t *testing.T) {
 	}
 	if len(blocks) > 1 {
 		t.Errorf("The test block file must only have one block in it")
+		return
+	}
+	if len(blocks) == 0 {
+		t.Errorf("The test block file may not be empty")
+		return
 	}
 
-	txStoreDataFile := fmt.Sprintf("%d.txstore.bz2", testBlockNum)
-	txStore, err := loadTxStore(txStoreDataFile)
+	storeDataFile := fmt.Sprintf("%d.utxostore.bz2", testBlockNum)
+	view, err := loadUtxoView(storeDataFile)
 	if err != nil {
 		t.Errorf("Error loading txstore: %v\n", err)
 		return
 	}
 
 	scriptFlags := txscript.ScriptBip16
-	err = blockchain.TstCheckBlockScripts(blocks[0], txStore, scriptFlags, nil)
+	err = checkBlockScripts(blocks[0], view, scriptFlags, nil, nil)
 	if err != nil {
-		t.Errorf("Transaction script validation failed: %v\n",
-			err)
+		t.Errorf("Transaction script validation failed: %v\n", err)
 		return
 	}
 }

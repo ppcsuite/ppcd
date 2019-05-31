@@ -1,15 +1,13 @@
-// Copyright (c) 2013-2014 The btcsuite developers
+// Copyright (c) 2013-2017 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package blockchain_test
+package blockchain
 
 import (
 	"strconv"
 	"testing"
 	"time"
-
-	"github.com/ppcsuite/ppcd/blockchain"
 )
 
 // TestMedianTime tests the medianTime implementation.
@@ -47,7 +45,7 @@ func TestMedianTime(t *testing.T) {
 		// be ignored.
 		{in: []int64{-4201, 4202, -4203, 4204, -4205}, wantOffset: 0},
 
-		// Excerise the condition where the median offset is greater
+		// Exercise the condition where the median offset is greater
 		// than the max allowed adjustment, but there is at least one
 		// sample that is close enough to the current time to avoid
 		// triggering a warning about an invalid local clock.
@@ -55,11 +53,11 @@ func TestMedianTime(t *testing.T) {
 	}
 
 	// Modify the max number of allowed median time entries for these tests.
-	blockchain.TstSetMaxMedianTimeEntries(10)
-	defer blockchain.TstSetMaxMedianTimeEntries(200)
+	maxMedianTimeEntries = 10
+	defer func() { maxMedianTimeEntries = 200 }()
 
 	for i, test := range tests {
-		filter := blockchain.NewMedianTime()
+		filter := NewMedianTime()
 		for j, offset := range test.in {
 			id := strconv.Itoa(j)
 			now := time.Unix(time.Now().Unix(), 0)

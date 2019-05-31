@@ -1,4 +1,4 @@
-// Copyright (c) 2013-2015 The btcsuite developers
+// Copyright (c) 2013-2016 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -10,9 +10,10 @@ import (
 	"strings"
 )
 
+// XXX pedro: we will probably need to bump this.
 const (
 	// ProtocolVersion is the latest protocol version this package supports.
-	ProtocolVersion uint32 = 70011
+	ProtocolVersion uint32 = 70013
 
 	// MultipleAddressVersion is the protocol version which added multiple
 	// addresses per message (pver >= MultipleAddressVersion).
@@ -35,13 +36,21 @@ const (
 	// with a relay flag (pver >= BIP0037Version).
 	BIP0037Version uint32 = 70001
 
+	// RejectVersion is the protocol version which added a new reject
+	// message.
+	RejectVersion uint32 = 70002
+
 	// BIP0111Version is the protocol version which added the SFNodeBloom
 	// service flag.
 	BIP0111Version uint32 = 70011
 
-	// RejectVersion is the protocol version which added a new reject
-	// message.
-	RejectVersion uint32 = 70002
+	// SendHeadersVersion is the protocol version which added a new
+	// sendheaders message.
+	SendHeadersVersion uint32 = 70012
+
+	// FeeFilterVersion is the protocol version which added a new
+	// feefilter message.
+	FeeFilterVersion uint32 = 70013
 )
 
 // ServiceFlag identifies services supported by a bitcoin peer.
@@ -55,9 +64,28 @@ const (
 	// getutxos and utxos commands (BIP0064).
 	SFNodeGetUTXO
 
-	// SFNodeBloom is a flag used to indiciate a peer supports bloom
+	// SFNodeBloom is a flag used to indicate a peer supports bloom
 	// filtering.
 	SFNodeBloom
+
+	// SFNodeWitness is a flag used to indicate a peer supports blocks
+	// and transactions including witness data (BIP0144).
+	SFNodeWitness
+
+	// SFNodeXthin is a flag used to indicate a peer supports xthin blocks.
+	SFNodeXthin
+
+	// SFNodeBit5 is a flag used to indicate a peer supports a service
+	// defined by bit 5.
+	SFNodeBit5
+
+	// SFNodeCF is a flag used to indicate a peer supports committed
+	// filters (CFs).
+	SFNodeCF
+
+	// SFNode2X is a flag used to indicate a peer is running the Segwit2X
+	// software.
+	SFNode2X
 )
 
 // Map of service flags back to their constant names for pretty printing.
@@ -65,6 +93,11 @@ var sfStrings = map[ServiceFlag]string{
 	SFNodeNetwork: "SFNodeNetwork",
 	SFNodeGetUTXO: "SFNodeGetUTXO",
 	SFNodeBloom:   "SFNodeBloom",
+	SFNodeWitness: "SFNodeWitness",
+	SFNodeXthin:   "SFNodeXthin",
+	SFNodeBit5:    "SFNodeBit5",
+	SFNodeCF:      "SFNodeCF",
+	SFNode2X:      "SFNode2X",
 }
 
 // orderedSFStrings is an ordered list of service flags from highest to
@@ -73,6 +106,11 @@ var orderedSFStrings = []ServiceFlag{
 	SFNodeNetwork,
 	SFNodeGetUTXO,
 	SFNodeBloom,
+	SFNodeWitness,
+	SFNodeXthin,
+	SFNodeBit5,
+	SFNodeCF,
+	SFNode2X,
 }
 
 // String returns the ServiceFlag in human-readable form.
@@ -108,26 +146,18 @@ type BitcoinNet uint32
 // this package does not provide that functionality since it's generally a
 // better idea to simply disconnect clients that are misbehaving over TCP.
 const (
-	// MainNet represents the main bitcoin network.
-	MainNet BitcoinNet = 0xe5e9e8e6
+	// MainNet represents the main peercoin network.
+	MainNet BitcoinNet = 0xe6e8e9e5
 
-	// TestNet represents the regression test network.
-	TestNet BitcoinNet = 0xdab5bffa
-
-	// TestNet3 represents the test network (version 3).
-	TestNet3 BitcoinNet = 0xefc0f2cb
-
-	// SimNet represents the simulation test network.
-	SimNet BitcoinNet = 0x12141c16
+	// TestNet represents the test network.
+	TestNet BitcoinNet = 0xcbf2c0ef
 )
 
 // bnStrings is a map of bitcoin networks back to their constant names for
 // pretty printing.
 var bnStrings = map[BitcoinNet]string{
-	MainNet:  "MainNet",
-	TestNet:  "TestNet",
-	TestNet3: "TestNet3",
-	SimNet:   "SimNet",
+	MainNet: "MainNet",
+	TestNet: "TestNet",
 }
 
 // String returns the BitcoinNet in human-readable form.

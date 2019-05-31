@@ -49,7 +49,7 @@ func MarshalCmd(id interface{}, cmd interface{}) ([]byte, error) {
 	// The provided command must not be nil.
 	rv := reflect.ValueOf(cmd)
 	if rv.IsNil() {
-		str := fmt.Sprint("the specified command is nil")
+		str := "the specified command is nil"
 		return nil, makeError(ErrInvalidType, str)
 	}
 
@@ -183,7 +183,7 @@ func typesMaybeCompatible(dest reflect.Type, src reflect.Type) bool {
 		return true
 	}
 
-	// When both types are numeric, they are potentially compatibile.
+	// When both types are numeric, they are potentially compatible.
 	srcKind := src.Kind()
 	destKind := dest.Kind()
 	if isNumeric(destKind) && isNumeric(srcKind) {

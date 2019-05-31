@@ -1,4 +1,4 @@
-// Copyright (c) 2014 The btcsuite developers
+// Copyright (c) 2014-2017 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -10,6 +10,8 @@ package btcjson
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/btcsuite/btcd/wire"
 )
 
 // AddNodeSubCmd defines the type used in the addnode JSON-RPC command for the
@@ -279,6 +281,37 @@ func NewGetBlockTemplateCmd(request *TemplateRequest) *GetBlockTemplateCmd {
 	}
 }
 
+// GetCFilterCmd defines the getcfilter JSON-RPC command.
+type GetCFilterCmd struct {
+	Hash       string
+	FilterType wire.FilterType
+}
+
+// NewGetCFilterCmd returns a new instance which can be used to issue a
+// getcfilter JSON-RPC command.
+func NewGetCFilterCmd(hash string, filterType wire.FilterType) *GetCFilterCmd {
+	return &GetCFilterCmd{
+		Hash:       hash,
+		FilterType: filterType,
+	}
+}
+
+// GetCFilterHeaderCmd defines the getcfilterheader JSON-RPC command.
+type GetCFilterHeaderCmd struct {
+	Hash       string
+	FilterType wire.FilterType
+}
+
+// NewGetCFilterHeaderCmd returns a new instance which can be used to issue a
+// getcfilterheader JSON-RPC command.
+func NewGetCFilterHeaderCmd(hash string,
+	filterType wire.FilterType) *GetCFilterHeaderCmd {
+	return &GetCFilterHeaderCmd{
+		Hash:       hash,
+		FilterType: filterType,
+	}
+}
+
 // GetChainTipsCmd defines the getchaintips JSON-RPC command.
 type GetChainTipsCmd struct{}
 
@@ -331,6 +364,19 @@ type GetInfoCmd struct{}
 // getinfo JSON-RPC command.
 func NewGetInfoCmd() *GetInfoCmd {
 	return &GetInfoCmd{}
+}
+
+// GetMempoolEntryCmd defines the getmempoolentry JSON-RPC command.
+type GetMempoolEntryCmd struct {
+	TxID string
+}
+
+// NewGetMempoolEntryCmd returns a new instance which can be used to issue a
+// getmempoolentry JSON-RPC command.
+func NewGetMempoolEntryCmd(txHash string) *GetMempoolEntryCmd {
+	return &GetMempoolEntryCmd{
+		TxID: txHash,
+	}
 }
 
 // GetMempoolInfoCmd defines the getmempoolinfo JSON-RPC command.
@@ -534,6 +580,19 @@ func NewPingCmd() *PingCmd {
 	return &PingCmd{}
 }
 
+// PreciousBlockCmd defines the preciousblock JSON-RPC command.
+type PreciousBlockCmd struct {
+	BlockHash string
+}
+
+// NewPreciousBlockCmd returns a new instance which can be used to issue a
+// preciousblock JSON-RPC command.
+func NewPreciousBlockCmd(blockHash string) *PreciousBlockCmd {
+	return &PreciousBlockCmd{
+		BlockHash: blockHash,
+	}
+}
+
 // ReconsiderBlockCmd defines the reconsiderblock JSON-RPC command.
 type ReconsiderBlockCmd struct {
 	BlockHash string
@@ -645,6 +704,14 @@ func NewSubmitBlockCmd(hexBlock string, options *SubmitBlockOptions) *SubmitBloc
 	}
 }
 
+// UptimeCmd defines the uptime JSON-RPC command.
+type UptimeCmd struct{}
+
+// NewUptimeCmd returns a new instance which can be used to issue an uptime JSON-RPC command.
+func NewUptimeCmd() *UptimeCmd {
+	return &UptimeCmd{}
+}
+
 // ValidateAddressCmd defines the validateaddress JSON-RPC command.
 type ValidateAddressCmd struct {
 	Address string
@@ -722,12 +789,15 @@ func init() {
 	MustRegisterCmd("getblockhash", (*GetBlockHashCmd)(nil), flags)
 	MustRegisterCmd("getblockheader", (*GetBlockHeaderCmd)(nil), flags)
 	MustRegisterCmd("getblocktemplate", (*GetBlockTemplateCmd)(nil), flags)
+	MustRegisterCmd("getcfilter", (*GetCFilterCmd)(nil), flags)
+	MustRegisterCmd("getcfilterheader", (*GetCFilterHeaderCmd)(nil), flags)
 	MustRegisterCmd("getchaintips", (*GetChainTipsCmd)(nil), flags)
 	MustRegisterCmd("getconnectioncount", (*GetConnectionCountCmd)(nil), flags)
 	MustRegisterCmd("getdifficulty", (*GetDifficultyCmd)(nil), flags)
 	MustRegisterCmd("getgenerate", (*GetGenerateCmd)(nil), flags)
 	MustRegisterCmd("gethashespersec", (*GetHashesPerSecCmd)(nil), flags)
 	MustRegisterCmd("getinfo", (*GetInfoCmd)(nil), flags)
+	MustRegisterCmd("getmempoolentry", (*GetMempoolEntryCmd)(nil), flags)
 	MustRegisterCmd("getmempoolinfo", (*GetMempoolInfoCmd)(nil), flags)
 	MustRegisterCmd("getmininginfo", (*GetMiningInfoCmd)(nil), flags)
 	MustRegisterCmd("getnetworkinfo", (*GetNetworkInfoCmd)(nil), flags)
@@ -743,12 +813,14 @@ func init() {
 	MustRegisterCmd("help", (*HelpCmd)(nil), flags)
 	MustRegisterCmd("invalidateblock", (*InvalidateBlockCmd)(nil), flags)
 	MustRegisterCmd("ping", (*PingCmd)(nil), flags)
+	MustRegisterCmd("preciousblock", (*PreciousBlockCmd)(nil), flags)
 	MustRegisterCmd("reconsiderblock", (*ReconsiderBlockCmd)(nil), flags)
 	MustRegisterCmd("searchrawtransactions", (*SearchRawTransactionsCmd)(nil), flags)
 	MustRegisterCmd("sendrawtransaction", (*SendRawTransactionCmd)(nil), flags)
 	MustRegisterCmd("setgenerate", (*SetGenerateCmd)(nil), flags)
 	MustRegisterCmd("stop", (*StopCmd)(nil), flags)
 	MustRegisterCmd("submitblock", (*SubmitBlockCmd)(nil), flags)
+	MustRegisterCmd("uptime", (*UptimeCmd)(nil), flags)
 	MustRegisterCmd("validateaddress", (*ValidateAddressCmd)(nil), flags)
 	MustRegisterCmd("verifychain", (*VerifyChainCmd)(nil), flags)
 	MustRegisterCmd("verifymessage", (*VerifyMessageCmd)(nil), flags)

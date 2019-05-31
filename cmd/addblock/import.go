@@ -1,4 +1,4 @@
-// Copyright (c) 2013-2014 The btcsuite developers
+// Copyright (c) 2013-2016 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -11,14 +11,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ppcsuite/btcutil"
+	"github.com/btcsuite/btcutil"
 	"github.com/ppcsuite/ppcd/blockchain"
+	"github.com/ppcsuite/ppcd/blockchain/indexers"
+	"github.com/ppcsuite/ppcd/chaincfg/chainhash"
 	"github.com/ppcsuite/ppcd/database"
-	_ "github.com/ppcsuite/ppcd/database/ldb"
 	"github.com/ppcsuite/ppcd/wire"
 )
 
-var zeroHash = wire.ShaHash{}
+var zeroHash = chainhash.Hash{}
 
 // importResults houses the stats and result as an import operation.
 type importResults struct {
@@ -30,9 +31,8 @@ type importResults struct {
 // blockImporter houses information about an ongoing import from a block data
 // file to the block database.
 type blockImporter struct {
-	db                database.Db
+	db                database.DB
 	chain             *blockchain.BlockChain
-	medianTime        blockchain.MedianTimeSource
 	r                 io.ReadSeeker
 	processQueue      chan []byte
 	doneChan          chan bool
@@ -104,8 +104,8 @@ func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
 	bi.receivedLogTx += int64(len(block.MsgBlock().Transactions))
 
 	// Skip blocks that already exist.
-	blockSha := block.Sha()
-	exists, err := bi.db.ExistsSha(blockSha)
+	blockHash := block.Hash()
+	exists, err := bi.chain.HaveBlock(blockHash)
 	if err != nil {
 		return false, err
 	}
@@ -116,7 +116,7 @@ func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
 	// Don't bother trying to process orphans.
 	prevHash := &block.MsgBlock().Header.PrevBlock
 	if !prevHash.IsEqual(&zeroHash) {
-		exists, err := bi.db.ExistsSha(prevHash)
+		exists, err := bi.chain.HaveBlock(prevHash)
 		if err != nil {
 			return false, err
 		}
@@ -129,14 +129,18 @@ func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
 
 	// Ensure the blocks follows all of the chain rules and match up to the
 	// known checkpoints.
-	isOrphan, err := bi.chain.ProcessBlock(block, bi.medianTime,
+	isMainChain, isOrphan, err := bi.chain.ProcessBlock(block,
 		blockchain.BFFastAdd)
 	if err != nil {
 		return false, err
 	}
+	if !isMainChain {
+		return false, fmt.Errorf("import file contains an block that "+
+			"does not extend the main chain: %v", blockHash)
+	}
 	if isOrphan {
 		return false, fmt.Errorf("import file contains an orphan "+
-			"block: %v", blockSha)
+			"block: %v", blockHash)
 	}
 
 	return true, nil
@@ -295,7 +299,47 @@ func (bi *blockImporter) Import() chan *importResults {
 
 // newBlockImporter returns a new importer for the provided file reader seeker
 // and database.
-func newBlockImporter(db database.Db, r io.ReadSeeker) *blockImporter {
+func newBlockImporter(db database.DB, r io.ReadSeeker) (*blockImporter, error) {
+	// Create the transaction and address indexes if needed.
+	//
+	// CAUTION: the txindex needs to be first in the indexes array because
+	// the addrindex uses data from the txindex during catchup.  If the
+	// addrindex is run first, it may not have the transactions from the
+	// current block indexed.
+	var indexes []indexers.Indexer
+	if cfg.TxIndex || cfg.AddrIndex {
+		// Enable transaction index if address index is enabled since it
+		// requires it.
+		if !cfg.TxIndex {
+			log.Infof("Transaction index enabled because it is " +
+				"required by the address index")
+			cfg.TxIndex = true
+		} else {
+			log.Info("Transaction index is enabled")
+		}
+		indexes = append(indexes, indexers.NewTxIndex(db))
+	}
+	if cfg.AddrIndex {
+		log.Info("Address index is enabled")
+		indexes = append(indexes, indexers.NewAddrIndex(db, activeNetParams))
+	}
+
+	// Create an index manager if any of the optional indexes are enabled.
+	var indexManager blockchain.IndexManager
+	if len(indexes) > 0 {
+		indexManager = indexers.NewManager(db, indexes)
+	}
+
+	chain, err := blockchain.New(&blockchain.Config{
+		DB:           db,
+		ChainParams:  activeNetParams,
+		TimeSource:   blockchain.NewMedianTime(),
+		IndexManager: indexManager,
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	return &blockImporter{
 		db:           db,
 		r:            r,
@@ -303,8 +347,7 @@ func newBlockImporter(db database.Db, r io.ReadSeeker) *blockImporter {
 		doneChan:     make(chan bool),
 		errChan:      make(chan error),
 		quit:         make(chan struct{}),
-		chain:        blockchain.New(db, activeNetParams, nil, nil),
-		medianTime:   blockchain.NewMedianTime(),
+		chain:        chain,
 		lastLogTime:  time.Now(),
-	}
+	}, nil
 }

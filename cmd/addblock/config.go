@@ -1,4 +1,4 @@
-// Copyright (c) 2013-2014 The btcsuite developers
+// Copyright (c) 2013-2016 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -9,16 +9,16 @@ import (
 	"os"
 	"path/filepath"
 
-	flags "github.com/btcsuite/go-flags"
-	"github.com/ppcsuite/btcutil"
+	"github.com/btcsuite/btcutil"
+	flags "github.com/jessevdk/go-flags"
 	"github.com/ppcsuite/ppcd/chaincfg"
 	"github.com/ppcsuite/ppcd/database"
-	_ "github.com/ppcsuite/ppcd/database/ldb"
+	_ "github.com/ppcsuite/ppcd/database/ffldb"
 	"github.com/ppcsuite/ppcd/wire"
 )
 
 const (
-	defaultDbType   = "leveldb"
+	defaultDbType   = "ffldb"
 	defaultDataFile = "bootstrap.dat"
 	defaultProgress = 10
 )
@@ -26,7 +26,7 @@ const (
 var (
 	btcdHomeDir     = btcutil.AppDataDir("ppcd", false)
 	defaultDataDir  = filepath.Join(btcdHomeDir, "data")
-	knownDbTypes    = database.SupportedDBs()
+	knownDbTypes    = database.SupportedDrivers()
 	activeNetParams = &chaincfg.MainNetParams
 )
 
@@ -40,6 +40,8 @@ type config struct {
 	RegressionTest bool   `long:"regtest" description:"Use the regression test network"`
 	SimNet         bool   `long:"simnet" description:"Use the simulation test network"`
 	InFile         string `short:"i" long:"infile" description:"File containing the block(s)"`
+	TxIndex        bool   `long:"txindex" description:"Build a full hash-based transaction index which makes all transactions available via the getrawtransaction RPC"`
+	AddrIndex      bool   `long:"addrindex" description:"Build a full address-based transaction index which makes the searchrawtransactions RPC available"`
 	Progress       int    `short:"p" long:"progress" description:"Show a progress message each time this number of seconds have passed -- Use 0 to disable progress announcements"`
 }
 

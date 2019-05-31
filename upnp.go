@@ -50,10 +50,10 @@ import (
 type NAT interface {
 	// Get the external address from outside the NAT.
 	GetExternalAddress() (addr net.IP, err error)
-	// Add a port mapping for protocol ("udp" or "tcp") from externalport to
+	// Add a port mapping for protocol ("udp" or "tcp") from external port to
 	// internal port with description lasting for timeout.
-	AddPortMapping(protocol string, externalPort int, description string, timeout int) (mappedExternalPort int, err error)
-	// Remove a previously added port mapping from externalport to
+	AddPortMapping(protocol string, externalPort, internalPort int, description string, timeout int) (mappedExternalPort int, err error)
+	// Remove a previously added port mapping from external port to
 	// internal port.
 	DeletePortMapping(protocol string, externalPort, internalPort int) (err error)
 }
@@ -105,8 +105,7 @@ func Discover(listeners []string) (nat NAT, err error) {
 			// return
 		}
 		answer := string(answerBytes[0:n])
-		discLog.Tracef("Answer = %v", answer)
-		if strings.Index(answer, "\r\nST: "+stVal) < 0 && strings.Index(answer, "\r\nST:"+stVal) < 0 {
+		if !strings.Contains(answer, "\r\n"+st) {
 			continue
 		}
 		// HTTP header field names are case-insensitive.
