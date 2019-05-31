@@ -12,18 +12,12 @@ import (
 	"sync"
 	"time"
 
-<<<<<<< ours:cpuminer.go
 	"github.com/ppcsuite/btcutil"
 	"github.com/ppcsuite/ppcd/blockchain"
+	"github.com/ppcsuite/ppcd/chaincfg"
+	"github.com/ppcsuite/ppcd/chaincfg/chainhash"
+	"github.com/ppcsuite/ppcd/mining"
 	"github.com/ppcsuite/ppcd/wire"
-=======
-	"github.com/btcsuite/btcd/blockchain"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/mining"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
->>>>>>> theirs:mining/cpuminer/cpuminer.go
 )
 
 const (
@@ -349,11 +343,7 @@ out:
 		// Create a new block template using the available transactions
 		// in the memory pool as a source of transactions to potentially
 		// include in the block.
-<<<<<<< ours:cpuminer.go
 		template, err := NewBlockTemplate(m.server.txMemPool, payToAddr, nil) // ppc:
-=======
-		template, err := m.g.NewBlockTemplate(payToAddr)
->>>>>>> theirs:mining/cpuminer/cpuminer.go
 		m.submitBlockLock.Unlock()
 		if err != nil {
 			errStr := fmt.Sprintf("Failed to create new block "+
@@ -607,11 +597,7 @@ func (m *CPUMiner) GenerateNBlocks(n uint32) ([]*chainhash.Hash, error) {
 		// Create a new block template using the available transactions
 		// in the memory pool as a source of transactions to potentially
 		// include in the block.
-<<<<<<< ours:cpuminer.go
 		template, err := NewBlockTemplate(m.server.txMemPool, payToAddr, nil) // ppc:
-=======
-		template, err := m.g.NewBlockTemplate(payToAddr)
->>>>>>> theirs:mining/cpuminer/cpuminer.go
 		m.submitBlockLock.Unlock()
 		if err != nil {
 			errStr := fmt.Sprintf("Failed to create new block "+
