@@ -8,8 +8,8 @@ import (
 	"errors"
 
 	"github.com/btcsuite/btcutil"
-	"github.com/ppcsuite/btcutil/gcs"
-	"github.com/ppcsuite/btcutil/gcs/builder"
+	"github.com/btcsuite/btcutil/gcs"
+	"github.com/btcsuite/btcutil/gcs/builder"
 	"github.com/ppcsuite/ppcd/blockchain"
 	"github.com/ppcsuite/ppcd/chaincfg"
 	"github.com/ppcsuite/ppcd/chaincfg/chainhash"
