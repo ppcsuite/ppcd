@@ -30,7 +30,7 @@ type MsgCheckPoint struct {
 func (msg *MsgCheckPoint) BtcDecode(r io.Reader, pver uint32) error {
 
 	// Command that was rejected.
-	cmd, err := readVarString(r, pver)
+	cmd, err := ReadVarString(r, pver)
 	if err != nil {
 		return err
 	}
@@ -51,7 +51,7 @@ func (msg *MsgCheckPoint) BtcDecode(r io.Reader, pver uint32) error {
 func (msg *MsgCheckPoint) BtcEncode(w io.Writer, pver uint32) error {
 
 	// Command that was rejected.
-	err := writeVarString(w, pver, msg.Cmd)
+	err := WriteVarString(w, pver, msg.Cmd)
 	if err != nil {
 		return err
 	}
