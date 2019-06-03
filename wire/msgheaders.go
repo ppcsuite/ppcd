@@ -72,6 +72,7 @@ func (msg *MsgHeaders) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) 
 			return messageError("MsgHeaders.BtcDecode", str)
 		}
 
+		/*
 		// Peercoin - read signature length
 		// https://github.com/ppcoin/ppcoin/blob/v0.4.0ppc/src/main.h#L922
 		// Along with empty txs vector ppcoin serializes vchBlockSig
@@ -91,6 +92,7 @@ func (msg *MsgHeaders) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) 
 		msg.AddBlockHeader(&bh)
 	}
 
+	*/
 	return nil
 }
 
