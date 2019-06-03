@@ -92,7 +92,7 @@ func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er
 		msg.Transactions = append(msg.Transactions, &tx)
 	}
 
-	msg.Signature, err = readVarBytes(r, pver, MaxMessagePayload,
+	msg.Signature, err = ReadVarBytes(r, pver, MaxMessagePayload,
 		"block signature")
 	if err != nil {
 		return err
@@ -173,7 +173,7 @@ func (msg *MsgBlock) DeserializeTxLoc(r *bytes.Buffer) ([]TxLoc, error) {
 		txLocs[i].TxLen = (fullLen - r.Len()) - txLocs[i].TxStart
 	}
 
-	msg.Signature, err = readVarBytes(r, 0, MaxMessagePayload,
+	msg.Signature, err = ReadVarBytes(r, 0, MaxMessagePayload,
 		"block signature")
 	if err != nil {
 		return nil, err
@@ -204,7 +204,7 @@ func (msg *MsgBlock) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er
 		}
 	}
 
-	err = writeVarBytes(w, pver, msg.Signature)
+	err = WriteVarBytes(w, pver, msg.Signature)
 	if err != nil {
 		return err
 	}
