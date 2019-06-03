@@ -107,7 +107,7 @@ func (msg *MsgHeaders) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) 
 		return messageError("MsgHeaders.BtcEncode", str)
 	}
 
-	err := WriteVarInt(w, pver, uint64(count))
+	err = WriteVarInt(w, pver, uint64(count))
 	if err != nil {
 		return err
 	}
