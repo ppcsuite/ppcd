@@ -192,24 +192,6 @@ func readElement(r io.Reader, element interface{}) error {
 	// Attempt to read the element based on the concrete type via fast
 	// type assertions first.
 	switch e := element.(type) {
-	case *int16:
-		b := scratch[0:2]
-		_, err := io.ReadFull(r, b)
-		if err != nil {
-			return err
-		}
-		*e = int16(binary.LittleEndian.Uint16(b))
-		return nil
-
-	case *uint16:
-		b := scratch[0:2]
-		_, err := io.ReadFull(r, b)
-		if err != nil {
-			return err
-		}
-		*e = binary.LittleEndian.Uint16(b)
-		return nil
-
 	case *int32:
 		rv, err := binarySerializer.Uint32(r, littleEndian)
 		if err != nil {
