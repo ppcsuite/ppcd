@@ -30,10 +30,10 @@ var (
 	// can have for the regression test network.  It is the value 2^255 - 1.
 	regressionPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
 
-	// testNet3PowLimit is the highest proof of work value a Peercoin block
+	// testNetPowLimit is the highest proof of work value a Peercoin block
 	// can have for the test network (version 3).  It is the value
 	// 2^228 - 1.
-	testNet3PowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 228), bigOne)
+	testNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 228), bigOne)
 
 	// simNetPowLimit is the highest proof of work value a Bitcoin block
 	// can have for the simulation test network.  It is the value 2^255 - 1.
@@ -222,9 +222,6 @@ type Params struct {
 
 	// ppc: peercoin specific parameters
 	StakeMinAge int64
-	// CoinbaseMaturity is the number of blocks required before newly
-	// mined bitcoins (coinbase transactions) can be spent.
-	CoinbaseMaturity      int64
 	InitialHashTargetBits uint32
 	// Modifier interval: time to elapse before new modifier is computed
 	ModifierInterval         int64
@@ -251,8 +248,7 @@ var MainNetParams = Params{
 	BIP0034Height:            227931, // TODO
 	BIP0065Height:            388381, // TODO
 	BIP0066Height:            363725, // TODO
-	CoinbaseMaturity:         100,
-	SubsidyReductionInterval: nil,
+	SubsidyReductionInterval: 0,
 	TargetTimespan:           time.Hour * 24 * 14, // 14 days
 	TargetTimePerBlock:       time.Minute * 10,    // 10 minutes
 	RetargetAdjustmentFactor: 4,                   // 25% less, 400% more
@@ -263,14 +259,14 @@ var MainNetParams = Params{
 	// Checkpoints ordered from oldest to newest.
 	// https://github.com/peercoin/peercoin/blob/master/src/checkpoints.cpp#L39
 	Checkpoints: []Checkpoint{
-		{19080, newShaHashFromStr("000000000000bca54d9ac17881f94193fd6a270c1bb21c3bf0b37f588a40dbd7")},
-		{30583, newShaHashFromStr("d39d1481a7eecba48932ea5913be58ad3894c7ee6d5a8ba8abeb772c66a6696e")},
-		{99999, newShaHashFromStr("27fd5e1de16a4270eb8c68dee2754a64da6312c7c3a0e99a7e6776246be1ee3f")},
-		{19999, newShaHashFromStr("ab0dad4b10d2370f009ed6df6effca1ba42f01d5070d6b30afeedf6463fbe7a2")},
-		{336000, newShaHashFromStr("4d261cef6e61a5ed8325e560f1d6e36f4698853a4c7134677f47a1d1d842bdf6")},
-		{371850, newShaHashFromStr("6b18adcb0a6e080dae85b74eee2b83fabb157bbea64fab0ed2192b2f6d5b89f3")},
-		{407813, newShaHashFromStr("00000000000000012730b0f48bed8afbeb08164c9d63597afb082e82ea05cec9")},
-		{420000, newShaHashFromStr("fa3fefef369f7f9f0e1b879f42674e8fdfaa88d0172caf1ce67eafed5e684706")},
+		{19080, newHashFromStr("000000000000bca54d9ac17881f94193fd6a270c1bb21c3bf0b37f588a40dbd7")},
+		{30583, newHashFromStr("d39d1481a7eecba48932ea5913be58ad3894c7ee6d5a8ba8abeb772c66a6696e")},
+		{99999, newHashFromStr("27fd5e1de16a4270eb8c68dee2754a64da6312c7c3a0e99a7e6776246be1ee3f")},
+		{19999, newHashFromStr("ab0dad4b10d2370f009ed6df6effca1ba42f01d5070d6b30afeedf6463fbe7a2")},
+		{336000, newHashFromStr("4d261cef6e61a5ed8325e560f1d6e36f4698853a4c7134677f47a1d1d842bdf6")},
+		{371850, newHashFromStr("6b18adcb0a6e080dae85b74eee2b83fabb157bbea64fab0ed2192b2f6d5b89f3")},
+		{407813, newHashFromStr("00000000000000012730b0f48bed8afbeb08164c9d63597afb082e82ea05cec9")},
+		{420000, newHashFromStr("fa3fefef369f7f9f0e1b879f42674e8fdfaa88d0172caf1ce67eafed5e684706")},
 	},
 
 	// Consensus rule change deployments.
@@ -432,7 +428,6 @@ var TestNetParams = Params{
 	BIP0034Height:            21111,  // TODO
 	BIP0065Height:            581885, // TODO
 	BIP0066Height:            330776, // TODO
-	CoinbaseMaturity:         100,
 	SubsidyReductionInterval: 210000,
 	TargetTimespan:           time.Hour * 24 * 14, // 14 days
 	TargetTimePerBlock:       time.Minute * 10,    // 10 minutes
@@ -621,7 +616,6 @@ func newHashFromStr(hexStr string) *chainhash.Hash {
 func init() {
 	// Register all default networks when the package is initialized.
 	mustRegister(&MainNetParams)
-	mustRegister(&TestNet3Params)
+	mustRegister(&TestNetParams)
 	mustRegister(&RegressionNetParams)
-	mustRegister(&SimNetParams)
 }

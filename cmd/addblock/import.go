@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/btcsuite/btcutil"
+	"github.com/ppcsuite/btcutil"
 	"github.com/ppcsuite/ppcd/blockchain"
 	"github.com/ppcsuite/ppcd/blockchain/indexers"
 	"github.com/ppcsuite/ppcd/chaincfg/chainhash"

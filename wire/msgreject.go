@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2016 The ppcsuite developers
+// Copyright (c) 2014-2016 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -71,13 +71,13 @@ type MsgReject struct {
 	Hash chainhash.Hash
 }
 
-// ppcDecode decodes r using the bitcoin protocol encoding into the receiver.
+// BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgReject) ppcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
+func (msg *MsgReject) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
 	if pver < RejectVersion {
 		str := fmt.Sprintf("reject message invalid for protocol "+
 			"version %d", pver)
-		return messageError("MsgReject.ppcDecode", str)
+		return messageError("MsgReject.BtcDecode", str)
 	}
 
 	// Command that was rejected.
@@ -113,13 +113,13 @@ func (msg *MsgReject) ppcDecode(r io.Reader, pver uint32, enc MessageEncoding) e
 	return nil
 }
 
-// ppcEncode encodes the receiver to w using the bitcoin protocol encoding.
+// BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgReject) ppcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
+func (msg *MsgReject) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
 	if pver < RejectVersion {
 		str := fmt.Sprintf("reject message invalid for protocol "+
 			"version %d", pver)
-		return messageError("MsgReject.ppcEncode", str)
+		return messageError("MsgReject.BtcEncode", str)
 	}
 
 	// Command that was rejected.

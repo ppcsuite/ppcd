@@ -66,6 +66,7 @@ func (b *BlockChain) maybeAcceptBlock(block *btcutil.Block, flags BehaviorFlags)
 		if err != nil {
 			return err
 		}
+	}
 	// Insert the block into the database if it's not already there.  Even
 	// though it is possible the block will ultimately fail to connect, it
 	// has already passed all proof-of-work and validity tests which means
@@ -93,14 +94,15 @@ func (b *BlockChain) maybeAcceptBlock(block *btcutil.Block, flags BehaviorFlags)
 		newNode.height = blockHeight
 		// ppc: newNode.workSum has been initialied to block trust in ppcNewBlockNode
 		newNode.workSum.Add(prevNode.workSum, newNode.workSum)
-	newNode := newBlockNode(blockHeader, prevNode)
-	newNode.status = statusDataStored
+	}
+	//newNode := newBlockNode(blockHeader, prevNode)
+	//newNode.status = statusDataStored
 
 	b.index.AddNode(newNode)
 	err = b.index.flushToDB()
 	if err != nil {
 		return false, err
-	}
+    }
 
 	// Connect the passed block to the chain while respecting proper chain
 	// selection according to the chain with the most proof of work.  This

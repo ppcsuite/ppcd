@@ -7,7 +7,7 @@ package indexers
 import (
 	"errors"
 
-	"github.com/btcsuite/btcutil"
+	"github.com/ppcsuite/btcutil"
 	"github.com/btcsuite/btcutil/gcs"
 	"github.com/btcsuite/btcutil/gcs/builder"
 	"github.com/ppcsuite/ppcd/blockchain"

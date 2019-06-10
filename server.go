@@ -22,7 +22,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/btcsuite/btcutil"
+	"github.com/ppcsuite/btcutil"
 	"github.com/ppcsuite/btcutil/bloom"
 	"github.com/ppcsuite/ppcd/addrmgr"
 	"github.com/ppcsuite/ppcd/blockchain"

@@ -216,7 +216,7 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bo
 					"is too low when compared to the previous "+
 					"checkpoint", currentTarget)
 				return false, false, ruleError(ErrDifficultyTooLow, str)
-			}
+			}*/
 		}
 	}
 

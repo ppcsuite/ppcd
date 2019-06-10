@@ -50,7 +50,7 @@ var genesisCoinbaseTx = wire.MsgTx{
 
 // genesisHash is the hash of the first block in the block chain for the main
 // network (genesis block).
-var genesisHash = wire.ShaHash([wire.HashSize]byte{ // Make go vet happy.
+var genesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
 	0xe3, 0x27, 0xcd, 0x80, 0xc8, 0xb1, 0x7e, 0xfd,
 	0xa4, 0xea, 0x08, 0xc5, 0x87, 0x7e, 0x95, 0xd8,
 	0x77, 0x46, 0x2a, 0xb6, 0x63, 0x49, 0xd5, 0x66,
@@ -59,7 +59,7 @@ var genesisHash = wire.ShaHash([wire.HashSize]byte{ // Make go vet happy.
 
 // genesisMerkleRoot is the hash of the first transaction in the genesis block
 // for the main network.
-var genesisMerkleRoot = wire.ShaHash([wire.HashSize]byte{ // Make go vet happy.
+var genesisMerkleRoot = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
 	0xc2, 0x93, 0x59, 0x2c, 0x05, 0x90, 0x56, 0x98,
 	0x29, 0x0c, 0x89, 0xeb, 0x6d, 0xde, 0xf0, 0xcf,
 	0x8a, 0xa5, 0xa1, 0x48, 0xc6, 0x8c, 0x55, 0xac,
@@ -118,7 +118,7 @@ var regTestGenesisBlock = wire.MsgBlock{
 
 // testNetGenesisHash is the hash of the first block in the block chain for the
 // test network.
-var testNetGenesisHash = wire.ShaHash([wire.HashSize]byte{ // Make go vet happy.
+var testNetGenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
 	0x06, 0x9f, 0x7c, 0xc4, 0xae, 0x81, 0xca, 0x0c,
 	0x7c, 0x72, 0xcc, 0x30, 0xe6, 0x8c, 0x65, 0xb0,
 	0x17, 0xcd, 0x17, 0x3e, 0x50, 0x96, 0x65, 0x7f,
@@ -130,13 +130,13 @@ var testNetGenesisHash = wire.ShaHash([wire.HashSize]byte{ // Make go vet happy.
 // for the main network.
 var testNetGenesisMerkleRoot = genesisMerkleRoot
 
-// testNet3GenesisBlock defines the genesis block of the block chain which
+// testNetGenesisBlock defines the genesis block of the block chain which
 // serves as the public transaction ledger for the test network (version 3).
-var testNet3GenesisBlock = wire.MsgBlock{
+var testNetGenesisBlock = wire.MsgBlock{
 	Header: wire.BlockHeader{
 		Version:    1,
 		PrevBlock:  chainhash.Hash{},          // 0000000000000000000000000000000000000000000000000000000000000000
-		MerkleRoot: testNet3GenesisMerkleRoot, // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
+		MerkleRoot: testNetGenesisMerkleRoot, // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
 		Timestamp:  time.Unix(1296688602, 0),  // 2011-02-02 23:16:42 +0000 UTC
 		Bits:       0x1d00ffff,                // 486604799 [00000000ffff0000000000000000000000000000000000000000000000000000]
 		Nonce:      0x18aea41a,                // 414098458

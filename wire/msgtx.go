@@ -787,6 +787,25 @@ func (msg *MsgTx) SerializeNoWitness(w io.Writer) error {
 	return msg.BtcEncode(w, 0, BaseEncoding)
 }
 
+// baseSize returns the serialized size of the transaction without accounting
+// for any witness data.
+func (msg *MsgTx) baseSize() int {
+    // Version 4 bytes + LockTime 4 bytes + Serialized varint size for the
+    // number of transaction inputs and outputs.
+    n := 8 + VarIntSerializeSize(uint64(len(msg.TxIn))) +
+        VarIntSerializeSize(uint64(len(msg.TxOut)))
+
+    for _, txIn := range msg.TxIn {
+        n += txIn.SerializeSize()
+    }
+
+    for _, txOut := range msg.TxOut {
+        n += txOut.SerializeSize()
+    }
+
+    return n
+}
+
 // SerializeSize returns the number of bytes it would take to serialize the
 // the transaction.
 func (msg *MsgTx) SerializeSize() int {

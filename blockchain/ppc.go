@@ -11,6 +11,7 @@ import (
 	"github.com/ppcsuite/btcutil"
 	"github.com/ppcsuite/ppcd/btcec"
 	"github.com/ppcsuite/ppcd/chaincfg"
+	"github.com/ppcsuite/ppcd/chaincfg/chainhash"
 	"github.com/ppcsuite/ppcd/database"
 	"github.com/ppcsuite/ppcd/txscript"
 	"github.com/ppcsuite/ppcd/wire"
@@ -72,7 +73,7 @@ var stakeSeen, stakeSeenOrphan = make(map[Stake]bool), make(map[Stake]bool)
 
 // getBlockNode try to obtain a node form the memory block chain and loads it
 // form the database in not found in memory.
-func (b *BlockChain) getBlockNode(hash *wire.ShaHash) (*blockNode, error) {
+func (b *BlockChain) getBlockNode(hash *chainhash.Hash) (*blockNode, error) {
 
 	// Return the existing previous block node if it's already there.
 	if bn, ok := b.index[*hash]; ok {
@@ -396,7 +397,7 @@ func IsCoinStake(tx *btcutil.Tx) bool {
 // for the passed block.  The work sum is updated accordingly when the node is
 // inserted into a chain.
 func ppcNewBlockNode(
-	blockHeader *wire.BlockHeader, blockSha *wire.ShaHash, height int64,
+	blockHeader *wire.BlockHeader, blockSha *chainhash.Hash, height int64,
 	blockMeta *wire.Meta) *blockNode {
 	// Make a copy of the hash so the node doesn't keep a reference to part
 	// of the full block/block header preventing it from being garbage
@@ -468,8 +469,8 @@ func setMetaStakeEntropyBit(meta *wire.Meta, entropyBit uint32) {
 	}
 }
 
-// bigToShaHash converts a big.Int into a wire.ShaHash.
-func bigToShaHash(value *big.Int) (*wire.ShaHash, error) {
+// bigToShaHash converts a big.Int into a chainhash.Hash.
+func bigToShaHash(value *big.Int) (*chainhash.Hash, error) {
 
 	buf := value.Bytes()
 
@@ -773,7 +774,7 @@ func (b *BlockChain) ppcProcessBlock(block *btcutil.Block, phase processPhase) e
 }
 
 // GetLastBlockHeader ppc: find last block from db up to lastSha
-func GetLastBlockHeader(db database.Db, lastSha *wire.ShaHash, proofOfStake bool) (
+func GetLastBlockHeader(db database.Db, lastSha *chainhash.Hash, proofOfStake bool) (
 	header *wire.BlockHeader, meta *wire.Meta, err error) {
 	sha := lastSha
 	for true {
@@ -794,7 +795,7 @@ func GetLastBlockHeader(db database.Db, lastSha *wire.ShaHash, proofOfStake bool
 
 // GetKernelStakeModifier
 // This function is NOT safe for concurrent access. Use blockmanager.
-func (b *BlockChain) GetKernelStakeModifier(hash *wire.ShaHash, timeSource MedianTimeSource) (uint64, error) {
+func (b *BlockChain) GetKernelStakeModifier(hash *chainhash.Hash, timeSource MedianTimeSource) (uint64, error) {
 	stakeModifier, _, _, err := b.getKernelStakeModifier(hash, timeSource, false)
 	return stakeModifier, err
 }
@@ -802,7 +803,7 @@ func (b *BlockChain) GetKernelStakeModifier(hash *wire.ShaHash, timeSource Media
 // WantedOrphan finds block wanted by given orphan block
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) WantedOrphan(hash *wire.ShaHash) *wire.ShaHash {
+func (b *BlockChain) WantedOrphan(hash *chainhash.Hash) *chainhash.Hash {
 	// Protect concurrent access.  Using a read lock only so multiple
 	// readers can query without blocking each other.
 	b.orphanLock.RLock()

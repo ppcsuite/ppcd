@@ -15,6 +15,7 @@ import (
 
 	"github.com/ppcsuite/btcutil"
 	"github.com/ppcsuite/ppcd/chaincfg"
+	"github.com/ppcsuite/ppcd/chaincfg/chainhash"
 	"github.com/ppcsuite/ppcd/txscript"
 	"github.com/ppcsuite/ppcd/wire"
 )
@@ -31,12 +32,12 @@ const (
 
 type blockTimeHash struct {
 	time int64
-	hash *wire.ShaHash
+	hash *chainhash.Hash
 }
 
 type blockTimeHashSorter []blockTimeHash
 
-var zeroSha = wire.ShaHash{}
+var zeroSha = chainhash.Hash{}
 
 // Len returns the number of timestamps in the slice.  It is part of the
 // sort.Interface implementation.
@@ -123,13 +124,13 @@ func getStakeModifierSelectionInterval(params *chaincfg.Params) int64 {
 // nSelectionIntervalStop.
 func selectBlockFromCandidates(
 	b *BlockChain, vSortedByTimestamp []blockTimeHash,
-	mapSelectedBlocks map[*wire.ShaHash]*blockNode,
+	mapSelectedBlocks map[*chainhash.Hash]*blockNode,
 	nSelectionIntervalStop int64,
 	nStakeModifierPrev uint64) (pindexSelected *blockNode, err error) {
 
 	defer timeTrack(now(), fmt.Sprintf("selectBlockFromCandidates"))
 
-	hashBest := new(wire.ShaHash)
+	hashBest := new(chainhash.Hash)
 	fSelected := false
 
 	for _, item := range vSortedByTimestamp {
@@ -148,7 +149,7 @@ func selectBlockFromCandidates(
 
 		// compute the selection hash by hashing its proof-hash and the
 		// previous proof-of-stake modifier
-		var hashProof wire.ShaHash
+		var hashProof chainhash.Hash
 		if !pindex.meta.HashProofOfStake.IsEqual(&zeroSha) { // TODO(mably) test null pointer in original code
 			hashProof = pindex.meta.HashProofOfStake
 		} else {
@@ -286,7 +287,7 @@ func (b *BlockChain) computeNextStakeModifier(pindexCurrent *btcutil.Block) (
 	// Select 64 blocks from candidate blocks to generate stake modifier
 	nStakeModifierNew := uint64(0)
 	nSelectionIntervalStop := nSelectionIntervalStart
-	mapSelectedBlocks := make(map[*wire.ShaHash]*blockNode)
+	mapSelectedBlocks := make(map[*chainhash.Hash]*blockNode)
 	for nRound := 0; nRound < minInt(64, len(vSortedByTimestamp)); nRound++ {
 		// add an interval section to the current selection round
 		nSelectionIntervalStop += getStakeModifierSelectionIntervalSection(b.chainParams, nRound)
@@ -400,7 +401,7 @@ func (b *BlockChain) addToBlockIndex(block *btcutil.Block) (err error) {
 // The stake modifier used to hash for a stake kernel is chosen as the stake
 // modifier about a selection interval later than the coin generating the kernel
 func (b *BlockChain) getKernelStakeModifier(
-	hashBlockFrom *wire.ShaHash, timeSource MedianTimeSource, fPrintProofOfStake bool) (
+	hashBlockFrom *chainhash.Hash, timeSource MedianTimeSource, fPrintProofOfStake bool) (
 	nStakeModifier uint64, nStakeModifierHeight int32, nStakeModifierTime int64,
 	err error) {
 
@@ -426,7 +427,7 @@ func (b *BlockChain) getKernelStakeModifier(
 	block := blockFrom
 	blockHeight := blockFromHeight
 	meta := metaFrom
-	var blockSha *wire.ShaHash
+	var blockSha *chainhash.Hash
 	// loop to find the stake modifier later by a selection interval
 	for nStakeModifierTime < (blockFromTimestamp + nStakeModifierSelectionInterval) {
 		if blockHeight >= b.bestChain.height { // reached best block; may happen if node is behind on block chain
@@ -483,7 +484,7 @@ func (b *BlockChain) checkStakeKernelHash(
 	nBits uint32, blockFrom *btcutil.Block, nTxPrevOffset uint32,
 	txPrev *btcutil.Tx, prevout *wire.OutPoint, nTimeTx int64,
 	timeSource MedianTimeSource, fPrintProofOfStake bool) (
-	hashProofOfStake *wire.ShaHash, success bool, err error) {
+	hashProofOfStake *chainhash.Hash, success bool, err error) {
 
 	defer timeTrack(now(), fmt.Sprintf("checkStakeKernelHash(%v)", slice(blockFrom.Sha())[0]))
 
@@ -534,7 +535,7 @@ func (b *BlockChain) checkStakeKernelHash(
 	var nStakeModifierHeight int32
 	var nStakeModifierTime int64
 	if isProtocolV03(b, nTimeTx) { // v0.3 protocol
-		var blockFromSha *wire.ShaHash
+		var blockFromSha *chainhash.Hash
 		blockFromSha = blockFrom.Sha()
 		nStakeModifier, nStakeModifierHeight, nStakeModifierTime, err =
 			b.getKernelStakeModifier(blockFromSha, timeSource, fPrintProofOfStake)
@@ -647,7 +648,7 @@ func (b *BlockChain) checkStakeKernelHash(
 
 // Check kernel hash target and coinstake signature
 func (b *BlockChain) checkTxProofOfStake(tx *btcutil.Tx, timeSource MedianTimeSource, nBits uint32) (
-	hashProofOfStake *wire.ShaHash, err error) {
+	hashProofOfStake *chainhash.Hash, err error) {
 
 	defer timeTrack(now(), fmt.Sprintf("CheckProofOfStake(%v)", slice(tx.Sha())[0]))
 
@@ -821,7 +822,7 @@ func (b *BlockChain) getStakeModifierChecksum(
 	}
 
 	//uint256 hashChecksum = Hash(ss.begin(), ss.end())
-	var hashChecksum *wire.ShaHash
+	var hashChecksum *chainhash.Hash
 	hashChecksum, err = wire.NewShaHash(
 		wire.DoubleSha256(buf.Bytes()[:bufSize]))
 	if err != nil {
@@ -948,7 +949,7 @@ func writeElement(w io.Writer, element interface{}) error {
 		}
 		return nil
 
-	case *wire.ShaHash:
+	case *chainhash.Hash:
 		_, err := w.Write(e[:])
 		if err != nil {
 			return err

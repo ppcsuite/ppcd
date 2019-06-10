@@ -27,7 +27,7 @@ type MsgCheckPoint struct {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgCheckPoint) BtcDecode(r io.Reader, pver uint32) error {
+func (msg *MsgCheckPoint) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
 
 	// Command that was rejected.
 	cmd, err := ReadVarString(r, pver)
@@ -48,7 +48,7 @@ func (msg *MsgCheckPoint) BtcDecode(r io.Reader, pver uint32) error {
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgCheckPoint) BtcEncode(w io.Writer, pver uint32) error {
+func (msg *MsgCheckPoint) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
 
 	// Command that was rejected.
 	err := WriteVarString(w, pver, msg.Cmd)

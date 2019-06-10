@@ -20,8 +20,8 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/btcsuite/btcd/database/ffldb"
-	"github.com/btcsuite/btcutil"
+	_ "github.com/ppcsuite/ppcd/database/ffldb"
+	"github.com/ppcsuite/btcutil"
 	"github.com/btcsuite/go-socks/socks"
 	flags "github.com/jessevdk/go-flags"
 	"github.com/ppcsuite/ppcd/blockchain"

@@ -15,8 +15,8 @@ import (
 	"runtime/debug"
 	"runtime/pprof"
 
-	"github.com/btcsuite/btcd/blockchain/indexers"
-	"github.com/btcsuite/btcd/database"
+	"github.com/ppcsuite/ppcd/blockchain/indexers"
+	"github.com/ppcsuite/ppcd/database"
 	"github.com/ppcsuite/ppcd/limits"
 )
 
