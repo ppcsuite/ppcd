@@ -7,14 +7,14 @@ package indexers
 import (
 	"errors"
 
-	"github.com/ppcsuite/btcutil"
-	"github.com/btcsuite/btcutil/gcs"
-	"github.com/btcsuite/btcutil/gcs/builder"
 	"github.com/ppcsuite/ppcd/blockchain"
 	"github.com/ppcsuite/ppcd/chaincfg"
 	"github.com/ppcsuite/ppcd/chaincfg/chainhash"
 	"github.com/ppcsuite/ppcd/database"
 	"github.com/ppcsuite/ppcd/wire"
+	"github.com/ppcsuite/ppcutil"
+	"github.com/ppcsuite/ppcutil/gcs"
+	"github.com/ppcsuite/ppcutil/gcs/builder"
 )
 
 const (

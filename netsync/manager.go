@@ -19,7 +19,7 @@ import (
 	"github.com/ppcsuite/ppcd/mempool"
 	peerpkg "github.com/ppcsuite/ppcd/peer"
 	"github.com/ppcsuite/ppcd/wire"
-	"github.com/ppcsuite/btcutil"
+	"github.com/ppcsuite/ppcutil"
 )
 
 const (
@@ -60,7 +60,7 @@ type newPeerMsg struct {
 // blockMsg packages a bitcoin block message and the peer it came from together
 // so the block handler has access to that information.
 type blockMsg struct {
-	block *btcutil.Block
+	block *ppcutil.Block
 	peer  *peerpkg.Peer
 	reply chan struct{}
 }
@@ -87,7 +87,7 @@ type donePeerMsg struct {
 // txMsg packages a bitcoin tx message and the peer it came from together
 // so the block handler has access to that information.
 type txMsg struct {
-	tx    *btcutil.Tx
+	tx    *ppcutil.Tx
 	peer  *peerpkg.Peer
 	reply chan struct{}
 }
@@ -111,7 +111,7 @@ type processBlockResponse struct {
 // extra handling whereas this message essentially is just a concurrent safe
 // way to call ProcessBlock on the internal block chain instance.
 type processBlockMsg struct {
-	block *btcutil.Block
+	block *ppcutil.Block
 	flags blockchain.BehaviorFlags
 	reply chan processBlockResponse
 }

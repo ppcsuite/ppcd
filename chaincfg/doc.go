@@ -26,7 +26,7 @@
 //          "log"
 //
 //          "github.com/ppcsuite/ppcd/chaincfg"
-//          "github.com/ppcsuite/btcutil"
+//          "github.com/ppcsuite/ppcutil"
 //  )
 //
 //  var testnet = flag.Bool("testnet", false, "operate on the testnet Bitcoin network")
@@ -46,7 +46,7 @@
 //
 //          // Create and print new payment address, specific to the active network.
 //          pubKeyHash := make([]byte, 20)
-//          addr, err := btcutil.NewAddressPubKeyHash(pubKeyHash, netParams)
+//          addr, err := ppcutil.NewAddressPubKeyHash(pubKeyHash, netParams)
 //          if err != nil {
 //                  log.Fatal(err)
 //          }

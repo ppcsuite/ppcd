@@ -11,7 +11,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ppcsuite/btcutil"
+	"github.com/ppcsuite/ppcutil"
 	"github.com/ppcsuite/ppcd/chaincfg"
 )
 
@@ -30,12 +30,12 @@ const (
 	nProtocolV04UpgradeTime int64 = 0
 )
 
-func getBlockTrust(block *btcutil.Block) *big.Int {
+func getBlockTrust(block *ppcutil.Block) *big.Int {
 	return calcTrust(block.MsgBlock().Header.Bits, block.MsgBlock().IsProofOfStake())
 }
 
 // ppcoin: entropy bit for stake modifier if chosen by modifier
-func getStakeEntropyBit(b *BlockChain, block *btcutil.Block) (uint32, error) {
+func getStakeEntropyBit(b *BlockChain, block *ppcutil.Block) (uint32, error) {
 
 	defer timeTrack(now(), fmt.Sprintf("getStakeEntropyBit(%v)", slice(block.Sha())[0]))
 
@@ -52,7 +52,7 @@ func getStakeEntropyBit(b *BlockChain, block *btcutil.Block) (uint32, error) {
 	} else {
 
 		// old protocol for entropy bit pre v0.4
-		hashSigBytes := btcutil.Hash160(block.MsgBlock().Signature)
+		hashSigBytes := ppcutil.Hash160(block.MsgBlock().Signature)
 		// to big-endian
 		blen := len(hashSigBytes)
 		for i := 0; i < blen/2; i++ {
@@ -138,13 +138,13 @@ func minInt64(a int64, b int64) int64 {
 }
 
 func now() time.Time {
-	return btcutil.Now()
+	return ppcutil.Now()
 }
 
 func timeTrack(start time.Time, name string) {
-	btcutil.TimeTrack(log, start, name)
+	ppcutil.TimeTrack(log, start, name)
 }
 
 func slice(args ...interface{}) []interface{} {
-	return btcutil.Slice(args)
+	return ppcutil.Slice(args)
 }

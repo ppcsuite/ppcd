@@ -11,7 +11,7 @@ import (
 
 	"github.com/ppcsuite/ppcd/chaincfg"
 	"github.com/ppcsuite/ppcd/database"
-	"github.com/ppcsuite/btcutil"
+	"github.com/ppcsuite/ppcutil"
 )
 
 // BenchmarkBlockHeader benchmarks how long it takes to load the mainnet genesis

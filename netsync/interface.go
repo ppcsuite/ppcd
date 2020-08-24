@@ -11,7 +11,7 @@ import (
 	"github.com/ppcsuite/ppcd/mempool"
 	"github.com/ppcsuite/ppcd/peer"
 	"github.com/ppcsuite/ppcd/wire"
-	"github.com/ppcsuite/btcutil"
+	"github.com/ppcsuite/ppcutil"
 )
 
 // PeerNotifier exposes methods to notify peers of status changes to
@@ -24,7 +24,7 @@ type PeerNotifier interface {
 
 	RelayInventory(invVect *wire.InvVect, data interface{})
 
-	TransactionConfirmed(tx *btcutil.Tx)
+	TransactionConfirmed(tx *ppcutil.Tx)
 }
 
 // Config is a configuration struct used to initialize a new SyncManager.

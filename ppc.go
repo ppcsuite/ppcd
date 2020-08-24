@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/ppcsuite/btcutil"
+	"github.com/ppcsuite/ppcutil"
 	"github.com/ppcsuite/ppcd/blockchain"
 	"github.com/ppcsuite/ppcd/btcjson"
 	"github.com/ppcsuite/ppcd/database"
@@ -293,7 +293,7 @@ func (m *CPUMiner) BuildMintBlock(coinStakeTx *wire.MsgTx) *BlockTemplate {
 	// in the memory pool as a source of transactions to potentially
 	// include in the block.
 	template, err := NewBlockTemplate(
-		m.server.txMemPool, nil, btcutil.NewTx(coinStakeTx))
+		m.server.txMemPool, nil, ppcutil.NewTx(coinStakeTx))
 	m.submitBlockLock.Unlock()
 	if err != nil {
 		errStr := fmt.Sprintf("Failed to create new block "+
@@ -308,7 +308,7 @@ func (m *CPUMiner) BuildMintBlock(coinStakeTx *wire.MsgTx) *BlockTemplate {
 // SubmitMintBlock
 func (m *CPUMiner) SubmitMintBlock(mintBlock *wire.MsgBlock) bool {
 
-	block := btcutil.NewBlock(mintBlock)
+	block := ppcutil.NewBlock(mintBlock)
 
 	return m.submitBlock(block)
 }

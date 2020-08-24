@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ppcsuite/btcutil"
+	"github.com/ppcsuite/ppcutil"
 	"github.com/btcsuite/websocket"
 	"github.com/gcash/bchd/btcjson"
 	"github.com/ppcsuite/ppcd/blockchain"
